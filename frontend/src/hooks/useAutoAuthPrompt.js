@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAuthModalOpen, setAuthModalTab } from '../store/slices/authSlice';
 
-const INITIAL_DELAY_MS = 60000; // 1 minute of site usage
-const REPEAT_DELAY_MS = 10000;  // 10 seconds repeat interval if dismissed
+const INITIAL_DELAY_MS = 300000; // 5 minutes of initial site usage
+const REPEAT_DELAY_MS = 120000;  // 2 minutes repeat interval if dismissed
 const STORAGE_START_KEY = 'thelalstreet_unauth_start_time';
 const STORAGE_TRIGGERED_KEY = 'thelalstreet_auth_prompt_triggered';
 
@@ -33,10 +33,10 @@ const safeStorage = {
 
 /**
  * useAutoAuthPrompt:
- * 1. Shows a login popup after 1 minute of website use if user is not logged in (new user).
+ * 1. Shows a login popup after 5 minutes of website use if user is not logged in (new user).
  * 2. If user logs in, the popup is immediately removed/closed and no timers run.
- * 3. If user logs out, after 1 minute of being logged out the popup appears again,
- *    and if closed/dismissed without logging in, it reappears every 10 seconds repeatedly.
+ * 3. If user logs out, after 5 minutes of being logged out the popup appears again,
+ *    and if closed/dismissed without logging in, it reappears every 2 minutes repeatedly.
  */
 export default function useAutoAuthPrompt() {
   const dispatch = useDispatch();
@@ -98,13 +98,13 @@ export default function useAutoAuthPrompt() {
       if (remainingInitial > 0) {
         delayMs = remainingInitial;
       } else {
-        // 1-minute initial duration has elapsed
+        // 5-minute initial duration has elapsed
         safeStorage.setItem(STORAGE_TRIGGERED_KEY, 'true');
         delayMs = 0;
       }
     } else {
-      // 1-minute has already passed and popup was dismissed without logging in;
-      // re-trigger every 10 seconds repeatedly
+      // 5-minute initial period has passed and popup was dismissed without logging in;
+      // re-trigger every 2 minutes repeatedly
       delayMs = REPEAT_DELAY_MS;
     }
 
