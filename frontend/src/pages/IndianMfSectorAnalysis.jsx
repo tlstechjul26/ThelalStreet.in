@@ -25,7 +25,8 @@ const TIMEFRAMES_NAV = ['1D', '1W', '1M', '3M', '6M', '1Y', '3Y', '5Y', 'All'];
 
 // Static Category Definitions with metadata
 const MUTUAL_FUND_CATEGORIES = [
-  { id: 'all', label: 'All Funds' },
+  { id: 'all_funds', label: 'All Funds' },
+  { id: 'all', label: 'All Markets' },
   { id: 'equity', label: 'Equity' },
   { id: 'debt', label: 'Debt' },
   { id: 'hybrid', label: 'Hybrid' },
@@ -1868,7 +1869,10 @@ export const IndianMfSectorAnalysis = () => {
       setSearchQuery(qParam);
       setIsAllFundsMode(true);
     }
-    if (marketParam && marketParam !== 'all') {
+    if (marketParam === 'all_funds') {
+      setIsAllFundsMode(true);
+      setActiveMarketFilter('all');
+    } else if (marketParam && marketParam !== 'all') {
       setActiveMarketFilter(marketParam);
       setIsAllFundsMode(false);
     }
@@ -3392,9 +3396,15 @@ export const IndianMfSectorAnalysis = () => {
         <MarketFilterStrip
           activeFilter={activeMarketFilter}
           onSelectFilter={(filterId) => {
-            setActiveMarketFilter(filterId);
-            setSelectedSubCategory('all');
-            setIsAllFundsMode(false);
+            if (filterId === 'all_funds') {
+              setIsAllFundsMode(true);
+              setActiveMarketFilter('all');
+              setSelectedSubCategory('all');
+            } else {
+              setIsAllFundsMode(false);
+              setActiveMarketFilter(filterId);
+              setSelectedSubCategory('all');
+            }
           }}
           rankMode={rankMode}
           onRankModeChange={setRankMode}

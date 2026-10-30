@@ -14,7 +14,11 @@ export default function MarketFilterStrip({
       {/* Horizontal Category / Fund Filters - Kept strictly in one single row on mobile with small font */}
       <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 py-0.5">
         {MARKET_FILTERS.map(filter => {
-          const isActive = activeFilter === filter.id || (filter.id === 'all' && (activeFilter === 'all' || isAllFundsMode));
+          const isActive = filter.id === 'all_funds'
+            ? isAllFundsMode
+            : filter.id === 'all'
+              ? (!isAllFundsMode && (activeFilter === 'all' || !activeFilter))
+              : (!isAllFundsMode && activeFilter === filter.id);
           return (
             <button
               key={filter.id}

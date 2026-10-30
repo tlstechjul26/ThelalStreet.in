@@ -150,13 +150,14 @@ export default function MfRankingTable({
     };
   }, []);
 
-  // Reset collapsed states when active market filter changes
+  // Reset collapsed states and pagination when active market filter or mode changes
   useEffect(() => {
     if (parentHoverTimerRef.current) clearTimeout(parentHoverTimerRef.current);
     if (subHoverTimerRef.current) clearTimeout(subHoverTimerRef.current);
     setCollapsedParentCats({});
     setCollapsedSubCats({});
-  }, [activeMarketFilter]);
+    setCurrentPage(1);
+  }, [activeMarketFilter, isAllFundsMode]);
 
   // Pagination state for All Funds mode
   const [currentPage, setCurrentPage] = useState(1);

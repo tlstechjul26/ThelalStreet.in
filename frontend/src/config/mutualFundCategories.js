@@ -1,7 +1,8 @@
 // Mutual Fund Categories and Subcategories Configuration
 
 export const MARKET_FILTERS = [
-  { id: 'all', label: 'All Funds' },
+  { id: 'all_funds', label: 'All Funds' },
+  { id: 'all', label: 'All Markets' },
   { id: 'equity', label: 'Equity' },
   { id: 'hybrid', label: 'Hybrid' },
   { id: 'sectoral_thematic', label: 'Sectoral & Thematic' },
@@ -15,7 +16,7 @@ export const MARKET_FILTERS = [
 
 export const MF_CATEGORIES = {
   all: [
-    { id: 'all', label: 'All Funds' }
+    { id: 'all', label: 'All Markets' }
   ],
   equity: [
     { id: 'all', label: 'All Equity' },
