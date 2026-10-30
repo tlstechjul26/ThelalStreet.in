@@ -5,8 +5,41 @@
  * for all stock and sector market data.
  */
 
-// Exchange holiday list (standard NSE/BSE holidays YYYY-MM-DD)
-const NSE_HOLIDAYS_2026 = new Set([
+// Official Exchange trading holidays list (NSE/BSE standard holidays YYYY-MM-DD)
+export const NSE_HOLIDAYS = new Set([
+  // 2024
+  '2024-01-26', // Republic Day
+  '2024-03-08', // Maha Shivratri
+  '2024-03-25', // Holi
+  '2024-03-29', // Good Friday
+  '2024-04-11', // Id-Ul-Fitr (Ramzan Id)
+  '2024-04-17', // Shri Ram Navami
+  '2024-05-01', // Maharashtra Day
+  '2024-06-17', // Bakri Id
+  '2024-07-17', // Muharram
+  '2024-08-15', // Independence Day
+  '2024-10-02', // Mahatma Gandhi Jayanti
+  '2024-11-01', // Diwali Laxmi Pujan (Muhurat trading evening)
+  '2024-11-15', // Gurunanak Jayanti
+  '2024-12-25', // Christmas
+
+  // 2025
+  '2025-01-26', // Republic Day (Sunday)
+  '2025-02-26', // Maha Shivratri
+  '2025-03-14', // Holi
+  '2025-03-31', // Id-Ul-Fitr
+  '2025-04-14', // Dr. Ambedkar Jayanti
+  '2025-04-18', // Good Friday
+  '2025-05-01', // Maharashtra Day
+  '2025-08-15', // Independence Day
+  '2025-08-27', // Ganesh Chaturthi
+  '2025-10-02', // Mahatma Gandhi Jayanti
+  '2025-10-21', // Dussehra
+  '2025-10-22', // Diwali Balipratipada
+  '2025-11-05', // Gurunanak Jayanti
+  '2025-12-25', // Christmas
+
+  // 2026
   '2026-01-26', // Republic Day
   '2026-03-06', // Maha Shivratri
   '2026-03-25', // Holi
@@ -16,14 +49,35 @@ const NSE_HOLIDAYS_2026 = new Set([
   '2026-05-01', // Maharashtra Day
   '2026-06-17', // Bakri Id
   '2026-07-17', // Muharram
-  '2026-08-15', // Independence Day
+  '2026-08-15', // Independence Day (Saturday)
   '2026-10-02', // Mahatma Gandhi Jayanti
   '2026-10-20', // Dussehra
-  '2026-11-08', // Diwali Laxmi Pujan
+  '2026-11-08', // Diwali Laxmi Pujan (Sunday)
   '2026-11-10', // Diwali Balipratipada
   '2026-11-24', // Gurunanak Jayanti
-  '2026-12-25'  // Christmas
+  '2026-12-25', // Christmas
+
+  // 2027
+  '2027-01-26', // Republic Day
+  '2027-02-15', // Maha Shivratri
+  '2027-03-22', // Holi
+  '2027-03-26', // Good Friday
+  '2027-04-14', // Dr. Ambedkar Jayanti
+  '2027-05-01', // Maharashtra Day (Saturday)
+  '2027-08-15', // Independence Day (Sunday)
+  '2027-10-02', // Mahatma Gandhi Jayanti (Saturday)
+  '2027-10-11', // Dussehra
+  '2027-10-29', // Diwali
+  '2027-11-14', // Gurunanak Jayanti (Sunday)
+  '2027-12-25'  // Christmas (Saturday)
 ]);
+
+// Keep backward-compatible reference
+const NSE_HOLIDAYS_2026 = NSE_HOLIDAYS;
+
+export function isNSEHoliday(dateStr) {
+  return NSE_HOLIDAYS.has(dateStr);
+}
 
 export const KNOWN_GLOBAL_SYMBOLS = new Set([
   'AAPL', 'MSFT', 'NVDA', 'AVGO', 'CRM', 'ADBE', 'AMD', 'ORCL', 'CSCO', 'INTU', 'IBM', 'QCOM', 'TXN', 'NOW', 'AMAT',
@@ -42,48 +96,68 @@ export const KNOWN_GLOBAL_SYMBOLS = new Set([
 
 /**
  * Determine the current market session status for Indian exchanges (NSE/BSE).
- * Returns: { isOpen: boolean, session: 'OPEN'|'PRE_OPEN'|'CLOSED'|'HOLIDAY'|'WEEKEND', istTimeStr: string }
+ * Uses official NSE calendar and Asia/Kolkata timezone.
+ * Returns: { isOpen: boolean, session: 'OPEN'|'PRE_OPEN'|'POST_CLOSE'|'CLOSED'|'HOLIDAY'|'WEEKEND', dateStr: string, istDateStr: string, istTimeStr: string, isTradingDay: boolean }
  */
 export function getIndianMarketSession(date = new Date()) {
-  const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
-  const istTime = new Date(utc + (3600000 * 5.5));
-  
-  const day = istTime.getDay(); // 0 = Sunday, 6 = Saturday
-  const year = istTime.getFullYear();
-  const month = String(istTime.getMonth() + 1).padStart(2, '0');
-  const dayOfMonth = String(istTime.getDate()).padStart(2, '0');
-  const dateStr = `${year}-${month}-${dayOfMonth}`;
+  const d = (date instanceof Date && !isNaN(date.getTime())) ? date : new Date(date);
+  const validDate = isNaN(d.getTime()) ? new Date() : d;
 
-  const hours = istTime.getHours();
-  const minutes = istTime.getMinutes();
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    weekday: 'short',
+    hour12: false
+  });
+  const parts = formatter.formatToParts(validDate);
+  const partMap = {};
+  for (const p of parts) partMap[p.type] = p.value;
+
+  const year = partMap.year;
+  const month = partMap.month;
+  const dayOfMonth = partMap.day;
+  const dateStr = `${year}-${month}-${dayOfMonth}`;
+  const weekday = partMap.weekday; // 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
+
+  const hours = parseInt(partMap.hour, 10);
+  const minutes = parseInt(partMap.minute, 10);
   const timeInMinutes = hours * 60 + minutes;
 
-  const istTimeStr = istTime.toISOString().replace('Z', '+05:30');
+  const istTimeStr = `${dateStr}T${partMap.hour}:${partMap.minute}:${partMap.second}+05:30`;
 
-  if (day === 0 || day === 6) {
-    return { isOpen: false, session: 'WEEKEND', istTimeStr };
+  const isWeekend = weekday === 'Sat' || weekday === 'Sun';
+  const isHoliday = NSE_HOLIDAYS.has(dateStr);
+  const isTradingDay = !isWeekend && !isHoliday;
+
+  if (isWeekend) {
+    return { isOpen: false, session: 'WEEKEND', dateStr, istDateStr: dateStr, istTimeStr, isTradingDay: false };
   }
 
-  if (NSE_HOLIDAYS_2026.has(dateStr)) {
-    return { isOpen: false, session: 'HOLIDAY', istTimeStr };
+  if (isHoliday) {
+    return { isOpen: false, session: 'HOLIDAY', dateStr, istDateStr: dateStr, istTimeStr, isTradingDay: false };
   }
 
   // Pre-open: 09:00 - 09:15 (540 to 555)
   if (timeInMinutes >= 540 && timeInMinutes < 555) {
-    return { isOpen: false, session: 'PRE_OPEN', istTimeStr };
+    return { isOpen: false, session: 'PRE_OPEN', dateStr, istDateStr: dateStr, istTimeStr, isTradingDay: true };
   }
 
   // Normal Trading: 09:15 - 15:30 (555 to 930)
   if (timeInMinutes >= 555 && timeInMinutes <= 930) {
-    return { isOpen: true, session: 'OPEN', istTimeStr };
+    return { isOpen: true, session: 'OPEN', dateStr, istDateStr: dateStr, istTimeStr, isTradingDay: true };
   }
 
   // Post-close session: 15:30 - 16:00 (930 to 960)
   if (timeInMinutes > 930 && timeInMinutes <= 960) {
-    return { isOpen: false, session: 'POST_CLOSE', istTimeStr };
+    return { isOpen: false, session: 'POST_CLOSE', dateStr, istDateStr: dateStr, istTimeStr, isTradingDay: true };
   }
 
-  return { isOpen: false, session: 'CLOSED', istTimeStr };
+  return { isOpen: false, session: 'CLOSED', dateStr, istDateStr: dateStr, istTimeStr, isTradingDay: true };
 }
 
 /**
@@ -197,11 +271,13 @@ export function validateAndSanitizeQuote(rawQuote) {
   const ltp = rawLtp;
   const previousClose = isValidPrevClose ? rawPrevClose : ltp;
 
-  // Unrounded float precision calculation
-  const change = parseFloat((ltp - previousClose).toFixed(4));
-  const changePercent = previousClose > 0 
-    ? parseFloat((((ltp - previousClose) / previousClose) * 100).toFixed(4))
-    : 0;
+  // Preserve authoritative change and changePercent from provider (e.g. Yahoo Finance) when available
+  const change = typeof rawQuote.change === 'number' && !isNaN(rawQuote.change)
+    ? parseFloat(rawQuote.change.toFixed(4))
+    : parseFloat((ltp - previousClose).toFixed(4));
+  const changePercent = typeof rawQuote.changePercent === 'number' && !isNaN(rawQuote.changePercent)
+    ? parseFloat(rawQuote.changePercent.toFixed(4))
+    : (previousClose > 0 ? parseFloat((((ltp - previousClose) / previousClose) * 100).toFixed(4)) : 0);
 
   let open = typeof rawQuote.open === 'number' && rawQuote.open > 0 ? rawQuote.open : previousClose;
   let dayHigh = typeof rawQuote.dayHigh === 'number' && rawQuote.dayHigh > 0 ? rawQuote.dayHigh : Math.max(open, ltp);
@@ -221,10 +297,18 @@ export function validateAndSanitizeQuote(rawQuote) {
   const revenueQuarterly = rawQuote.revenueQuarterly || null;
   const netProfit = typeof rawQuote.netProfit === 'number' && !isNaN(rawQuote.netProfit) ? rawQuote.netProfit : null;
 
-  const rawPriceAsOf = rawQuote.priceAsOf;
+  const session = isIndian ? getIndianMarketSession() : getUSMarketSession();
+
+  const rawPriceAsOf = rawQuote.priceAsOf || (rawQuote.regularMarketTime ? new Date(rawQuote.regularMarketTime * 1000).toISOString() : null);
   let priceAsOf = rawPriceAsOf;
+
+  // On market-closed days, retain the latest valid session timestamp. Never synthesize a new price timestamp on closed days.
   if (!priceAsOf || isNaN(new Date(priceAsOf).getTime())) {
-    priceAsOf = new Date().toISOString();
+    if (!session.isOpen && session.istDateStr) {
+      priceAsOf = `${session.istDateStr}T15:30:00+05:30`;
+    } else {
+      priceAsOf = new Date().toISOString();
+    }
   }
 
   // Reject future timestamps by clamping to current time
@@ -232,16 +316,30 @@ export function validateAndSanitizeQuote(rawQuote) {
     priceAsOf = new Date().toISOString();
   }
 
-  const session = isIndian ? getIndianMarketSession() : getUSMarketSession();
-
   let dataStatus = 'EOD';
   let isLive = false;
 
+  const priceAgeMinutes = (Date.now() - new Date(priceAsOf).getTime()) / (1000 * 60);
+
   if (session.isOpen) {
-    dataStatus = 'LIVE';
-    isLive = true;
+    // Never label cached data as live
+    if (rawQuote.fromCache === true || rawQuote.isCached === true) {
+      isLive = false;
+      dataStatus = priceAgeMinutes > 20 ? 'STALE' : 'DELAYED';
+    } else if (priceAgeMinutes > 20) {
+      // Data older than 20 mins during market hours is stale
+      isLive = false;
+      dataStatus = 'STALE';
+    } else if (rawQuote.isLive === false || rawQuote.sourceType === 'DELAYED') {
+      isLive = false;
+      dataStatus = 'DELAYED';
+    } else {
+      dataStatus = 'LIVE';
+      isLive = true;
+    }
   } else {
-    dataStatus = 'EOD';
+    // Market is closed (weekend, holiday, pre-open, post-close, or closed hours)
+    dataStatus = rawQuote.dataStatus && rawQuote.dataStatus !== 'LIVE' ? rawQuote.dataStatus : 'EOD';
     isLive = false;
   }
 
@@ -326,6 +424,8 @@ export function isResearchUsable(statusOrObj) {
 }
 
 export default {
+  NSE_HOLIDAYS,
+  isNSEHoliday,
   getIndianMarketSession,
   getUSMarketSession,
   isFinancialEntity,

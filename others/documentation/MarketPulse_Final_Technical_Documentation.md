@@ -1,14 +1,14 @@
-# MARKETPULSE
+# THE LAL STREET
 ## Indian Stocks & Mutual Funds
 ### Data, Terms, Sources & Calculation Guide
 
-**A simple user guide explaining MarketPulse data, rankings, ratings, formulas, sources and research metrics.**
+**A simple user guide explaining The Lal Street data, rankings, ratings, formulas, sources and research metrics.**
 
 ---
 
 ### Document Overview & Control
 
-- **Project Name**: MarketPulse (Indian Equities & Mutual Fund Market Intelligence Platform)
+- **Project Name**: The Lal Street (Indian Equities & Mutual Fund Market Intelligence Platform)
 - **Document Version**: 3.2.0 (Comprehensive Reference & Stock Weightage Screener Edition)
 - **Publication Date**: September 17, 2026
 - **Purpose**: Authoritative, comprehensive engineering and user guide detailing market intelligence data provenance, exact mathematical calculation formulas, institutional rankings, star evaluations, portfolio disclosure pipelines, stock weightage screener analytics, and the Zero-Fabrication Standard.
@@ -20,8 +20,8 @@
 
 ## Table of Contents
 
-- [1. About MarketPulse](#1-about-marketpulse)
-- [2. How MarketPulse Data Works](#2-how-marketpulse-data-works)
+- [1. About The Lal Street](#1-about-the-lal-street)
+- [2. How The Lal Street Data Works](#2-how-the-lal-street-data-works)
 - [3. External Data Sources](#3-external-data-sources)
 - [4. Data Classifications & Types](#4-data-classifications--types)
 - [PART I — STOCKS](#part-i--stocks)
@@ -61,13 +61,13 @@
 
 ---
 
-## 1. About MarketPulse
+## 1. About The Lal Street
 
-MarketPulse is an independent financial market intelligence and research website designed specifically for the Indian capital markets.
+The Lal Street is an independent financial market intelligence and research website designed specifically for the Indian capital markets.
 
 Its mission is to give every investor, analyst, researcher, and student clean, transparent, and authentic financial data.
 
-### What MarketPulse Provides
+### What The Lal Street Provides
 
 1. **Indian Equities & Sectors**: Tracking of 30 standardized economic sectors (such as Nifty Bank, Nifty IT, Nifty Auto, Nifty FMCG) with live or delayed market data depending on the underlying feed (advancing, declining, and unchanged stocks) and constituent company performance.
 2. **National Stock Directory**: Complete ranking of 12,536 listed Indian equities across both the National Stock Exchange (NSE) and Bombay Stock Exchange (BSE), ranked strictly by full market capitalization.
@@ -79,22 +79,22 @@ Its mission is to give every investor, analyst, researcher, and student clean, t
 ### Core Principles
 
 - **Simplicity**: Complex financial concepts are presented in clear, accessible language without unnecessary jargon.
-- **Data Authenticity**: Every number on MarketPulse comes from an authoritative primary source or a mathematically verified formula.
-- **Zero Fabrication**: MarketPulse never generates fake numbers, placeholder revenue, simulated prices, or default ratios. If data is not reported by the company or regulator, it is clearly shown as —.
+- **Data Authenticity**: Every number on The Lal Street comes from an authoritative primary source or a mathematically verified formula.
+- **Zero Fabrication**: The Lal Street never generates fake numbers, placeholder revenue, simulated prices, or default ratios. If data is not reported by the company or regulator, it is clearly shown as —.
 - **Apples-to-Apples Comparisons**: Mutual funds are categorized by plan and peer group to ensure fair comparisons (e.g. Direct Growth vs Direct Growth, Small Cap vs Small Cap).
-- **Research Only**: MarketPulse is strictly an analytical and educational platform. It does not provide buy/sell advice, tips, price targets, or return guarantees.
+- **Research Only**: The Lal Street is strictly an analytical and educational platform. It does not provide buy/sell advice, tips, price targets, or return guarantees.
 
 ---
 
-## 2. How MarketPulse Data Works
+## 2. How The Lal Street Data Works
 
-Understanding where numbers come from is essential for smart investing and sound research. MarketPulse operates on a multi-stage data architecture designed to keep data fresh, accurate, and transparent.
+Understanding where numbers come from is essential for smart investing and sound research. The Lal Street operates on a multi-stage data architecture designed to keep data fresh, accurate, and transparent.
 
 ### The 4-Step Data Flow
 
-1. **Collection (Data Ingestion)**: MarketPulse connects to official regulatory portals, stock exchange feeds, and specialized financial market APIs. Live or delayed equity quotes depending on the underlying feed are ingested from Yahoo Finance; official daily Net Asset Values are fetched from AMFI; mutual fund stock portfolios, constituent holdings, equity weights, and sector breakdowns are fetched directly from FinAPI (Upvaly); quarterly corporate financial statements originate from BSE regulatory filings; and sovereign macroeconomic benchmarks are retrieved from the Reserve Bank of India (RBI).
+1. **Collection (Data Ingestion)**: The Lal Street connects to official regulatory portals, stock exchange feeds, and specialized financial market APIs. Live or delayed equity quotes depending on the underlying feed are ingested from Yahoo Finance; official daily Net Asset Values are fetched from AMFI; mutual fund stock portfolios, constituent holdings, equity weights, and sector breakdowns are fetched directly from FinAPI (Upvaly); quarterly corporate financial statements originate from BSE regulatory filings; and sovereign macroeconomic benchmarks are retrieved from the Reserve Bank of India (RBI).
 2. **Cleaning & Normalization**: Raw data is checked for accuracy. Dual-listed stocks on NSE and BSE are deduplicated. Currency values are standardized into standard Indian numbering units (₹ Crores and Lakhs). Incompatible items (such as computing operating income for banks) are safely suppressed.
-3. **Internal Calculations**: MarketPulse runs its own deterministic formulas to calculate metrics that are not provided directly by APIs. These include same-quarter YoY growth, multi-period price returns, AUM rankings, 3-year trailing Sharpe ratios, Sortino downside deviation, and beta against market benchmarks.
+3. **Internal Calculations**: The Lal Street runs its own deterministic formulas to calculate metrics that are not provided directly by APIs. These include same-quarter YoY growth, multi-period price returns, AUM rankings, 3-year trailing Sharpe ratios, Sortino downside deviation, and beta against market benchmarks.
 4. **Fast Delivery & Presentation**: Validated data is cached in memory to ensure near-instant page loading on the website. Live or delayed updates stream to user screens during market hours depending on the underlying feed.
 
 ### Trading Hours vs Post-Market Sessions
@@ -107,7 +107,7 @@ Understanding where numbers come from is essential for smart investing and sound
 
 ## 3. External Data Sources
 
-MarketPulse relies exclusively on verified external providers and official regulatory filing systems. The platform does not use synthetic feeds or unregulated scraping sources.
+The Lal Street relies exclusively on verified external providers and official regulatory filing systems. The platform does not use synthetic feeds or unregulated scraping sources.
 
 ### Summary of Authoritative Providers
 
@@ -125,7 +125,7 @@ MarketPulse relies exclusively on verified external providers and official regul
 
 ## 4. Data Classifications & Types
 
-Every metric displayed on MarketPulse belongs to one of seven distinct data classifications. Knowing the classification helps users understand how often a number changes and whether it is fetched or calculated.
+Every metric displayed on The Lal Street belongs to one of seven distinct data classifications. Knowing the classification helps users understand how often a number changes and whether it is fetched or calculated.
 
 1. **DYNAMIC**:
    - *Meaning*: Information that changes continuously during active market trading hours.
@@ -138,7 +138,7 @@ Every metric displayed on MarketPulse belongs to one of seven distinct data clas
    - *Update Frequency*: Daily, monthly, or quarterly.
 
 3. **CALCULATED**:
-   - *Meaning*: Numbers derived internally by MarketPulse using specific mathematical formulas applied to primary data.
+   - *Meaning*: Numbers derived internally by The Lal Street using specific mathematical formulas applied to primary data.
    - *Examples*: Revenue YoY %, Net Profit YoY %, 3Y CAGR, Sharpe Ratio, Sortino Ratio, India Stock Rank, Category AUM Rank.
    - *Update Frequency*: Recomputed whenever underlying input data updates.
 
@@ -172,12 +172,12 @@ Every metric displayed on MarketPulse belongs to one of seven distinct data clas
 
 ## 5. Stock Overview
 
-MarketPulse provides comprehensive analytics for the Indian equity universe using live or delayed market data depending on the underlying feed, combined with verified historical time series.
+The Lal Street provides comprehensive analytics for the Indian equity universe using live or delayed market data depending on the underlying feed, combined with verified historical time series.
 
 ### Scope of Coverage
 - **12,536 Listed Equities**: Complete deduplicated universe of companies listed on the National Stock Exchange (NSE) and Bombay Stock Exchange (BSE).
 - **30 Standardized Economic Sectors**: Including Nifty 50, Nifty Bank, Nifty IT, Nifty Auto, Nifty FMCG, Nifty Pharma, Nifty Metal, Nifty Energy, Nifty Media, Nifty Realty, and sectoral sub-indices.
-- **Dual-Listing Deduplication**: Indian companies frequently trade on both NSE and BSE under different symbols (e.g. `RELIANCE.NS` on NSE and `500325.BO` on BSE). MarketPulse groups dual listings under a single canonical company identity (`RELIANCE`) to prevent duplicate ranks and split market capitalizations.
+- **Dual-Listing Deduplication**: Indian companies frequently trade on both NSE and BSE under different symbols (e.g. `RELIANCE.NS` on NSE and `500325.BO` on BSE). The Lal Street groups dual listings under a single canonical company identity (`RELIANCE`) to prevent duplicate ranks and split market capitalizations.
 
 ### Key Visual & Analytical Features
 1. **Interactive Sector Heatmaps**: Color-coded performance tiles showing which industries are gaining or losing on the trading day.
@@ -194,7 +194,7 @@ MarketPulse provides comprehensive analytics for the Indian equity universe usin
 
 ## 6. Stock Sources
 
-MarketPulse integrates multiple authoritative data feeds to deliver complete equity coverage.
+The Lal Street integrates multiple authoritative data feeds to deliver complete equity coverage.
 
 ### 1. Yahoo Finance (v2 Market Feed)
 - **Data Provided**: Last Traded Price (LTP), Open, High, Low, Previous Close, Trading Volume, Full Market Capitalization, 52-Week High, 52-Week Low, and historical daily price series (live or delayed market data depending on the underlying feed).
@@ -208,7 +208,7 @@ MarketPulse integrates multiple authoritative data feeds to deliver complete equ
 - **Update Frequency**: Quarterly, as listed companies report earnings within 45 days of quarter-end.
 - **Important Limitations**: Filing dates vary by company. Consolidated figures are prioritized; standalone figures are used only when consolidated statements are not filed.
 
-### 3. MarketPulse Internal Financial Engine
+### 3. The Lal Street Internal Financial Engine
 - **Data Provided**: National Market Capitalization Rank (`indiaStockRank`), true same-quarter Year-on-Year (YoY) Revenue Growth, same-quarter Net Profit Growth, Reported EBIT in ₹ Crores, multi-period price returns (1W, 1M, 6M, 1Y, 3Y, 5Y, ALL), 52-Week Low Recovery %, and All-Time High Drawdown %.
 - **Data Type**: Internal deterministic mathematical calculations.
 - **Update Frequency**: Recalculated dynamically upon refreshed market quotes or quarterly filings.
@@ -217,7 +217,7 @@ MarketPulse integrates multiple authoritative data feeds to deliver complete equ
 
 ## 7. Stock Data Behavior
 
-The following comprehensive table details every stock metric implemented on MarketPulse, its source, update behavior, and missing data rule:
+The following comprehensive table details every stock metric implemented on The Lal Street, its source, update behavior, and missing data rule:
 
 | Metric Name | Primary Source | Data Type | Update Frequency | Calculated? | Manual? | As-Of Date | Missing Data Rule |
 |---|---|---|---|:---:|:---:|---|---|
@@ -225,7 +225,7 @@ The following comprehensive table details every stock metric implemented on Mark
 | **NSE Symbol** | NSE Master (`.NS`) | Static | Permanent | No | No | Listing date | — (if BSE only) |
 | **BSE Code** | BSE Master (`.BO`) | Static | Permanent | No | Yes (map) | Listing date | — (if NSE only) |
 | **ISIN** | NSDL / CDSL Master | Static | Permanent | No | No | Issuance date | — |
-| **Sector** | MarketPulse Sector Map | Static | Reclassification | No | Yes (basket)| Rebalance date | Unclassified |
+| **Sector** | The Lal Street Sector Map | Static | Reclassification | No | Yes (basket)| Rebalance date | Unclassified |
 | **Industry** | GICS / Exchange Map | Static | Reclassification | No | No | Filing date | — |
 | **Current Price (LTP)** | Yahoo Finance API | Dynamic | Live / 15m delay feed | No | No | Market feed time | — |
 | **Day Change (₹)** | Yahoo Finance API | Dynamic | Live / 15m delay feed | Yes (LTP − Prev) | No | Market feed time | — |
@@ -236,45 +236,45 @@ The following comprehensive table details every stock metric implemented on Mark
 | **Previous Close** | Yahoo Finance API | Periodic | Daily post-market | No | No | Prior trading day | — |
 | **Trading Volume** | Yahoo Finance API | Dynamic | Intraday cumulative | No | No | Current session | — |
 | **Market Cap (₹ Cr)** | Yahoo Finance API | Dynamic | Live / 15m delay feed | Yes (Normalized) | No | Current session | — |
-| **India Stock Rank** | MarketPulse Ranking Engine| Calculated| Session updates | Yes (MCap DESC) | No | Current session | — |
+| **India Stock Rank** | The Lal Street Ranking Engine| Calculated| Session updates | Yes (MCap DESC) | No | Current session | — |
 | **Quarterly Revenue** | BSE / Corporate Filings | Periodic | Quarterly | Yes (in ₹ Cr) | No | Fiscal quarter-end | — |
-| **Revenue YoY %** | MarketPulse Engine | Calculated| Quarterly | Yes (Same-quarter)| No | Prior quarter-end | — |
+| **Revenue YoY %** | The Lal Street Engine | Calculated| Quarterly | Yes (Same-quarter)| No | Prior quarter-end | — |
 | **Quarterly Net Profit** | BSE / Corporate Filings | Periodic | Quarterly | Yes (in ₹ Cr) | No | Fiscal quarter-end | — |
-| **Net Profit YoY %** | MarketPulse Engine | Calculated| Quarterly | Yes (Same-quarter)| No | Prior quarter-end | — |
-| **Reported EBIT (₹ Cr)** | MarketPulse Engine | Calculated| Quarterly / TTM | Yes (Rev × OpMargin)| No | Fiscal quarter-end | — (Not applicable for Banks) |
+| **Net Profit YoY %** | The Lal Street Engine | Calculated| Quarterly | Yes (Same-quarter)| No | Prior quarter-end | — |
+| **Reported EBIT (₹ Cr)** | The Lal Street Engine | Calculated| Quarterly / TTM | Yes (Rev × OpMargin)| No | Fiscal quarter-end | — (Not applicable for Banks) |
 | **Operating Margin %** | Corporate Filings | Periodic | Quarterly / TTM | Yes (EBIT ÷ Rev) | No | Fiscal quarter-end | — |
 | **Net Profit Margin %** | Corporate Filings | Periodic | Quarterly / TTM | Yes (Profit ÷ Rev)| No | Fiscal quarter-end | — |
 | **Earnings Per Share (EPS)**| Corporate Filings | Periodic | Quarterly / TTM | No | No | Fiscal quarter-end | — |
-| **P/E Ratio (Trailing)** | MarketPulse / Yahoo | Dynamic | Daily with LTP | Yes (Price ÷ EPS) | No | Current session | — |
-| **P/B Ratio** | MarketPulse / Yahoo | Dynamic | Daily with LTP | Yes (Price ÷ Book)| No | Current session | — |
-| **EV / EBITDA** | MarketPulse / Yahoo | Periodic | Quarterly / TTM | Yes | No | Current session | — |
+| **P/E Ratio (Trailing)** | The Lal Street / Yahoo | Dynamic | Daily with LTP | Yes (Price ÷ EPS) | No | Current session | — |
+| **P/B Ratio** | The Lal Street / Yahoo | Dynamic | Daily with LTP | Yes (Price ÷ Book)| No | Current session | — |
+| **EV / EBITDA** | The Lal Street / Yahoo | Periodic | Quarterly / TTM | Yes | No | Current session | — |
 | **PEG Ratio** | Corporate Filings | Periodic | Quarterly / TTM | Yes (PE ÷ Growth) | No | Current session | — |
 | **Return on Equity (ROE)** | Corporate Filings | Periodic | Annual / TTM | Yes | No | Annual report date| — |
 | **ROCE %** | Corporate Filings | Periodic | Annual / TTM | Yes | No | Annual report date| — |
 | **Debt-to-Equity Ratio** | Corporate Filings | Periodic | Annual / TTM | Yes | No | Balance sheet date| — |
 | **Interest Coverage** | Corporate Filings | Periodic | Annual / TTM | Yes | No | Fiscal quarter-end | — |
 | **Current Ratio** | Corporate Filings | Periodic | Annual / TTM | Yes | No | Balance sheet date| — |
-| **Dividend Yield %** | MarketPulse / Yahoo | Dynamic | Daily with LTP | Yes (Div ÷ Price) | No | Current session | — |
+| **Dividend Yield %** | The Lal Street / Yahoo | Dynamic | Daily with LTP | Yes (Div ÷ Price) | No | Current session | — |
 | **52-Week High** | Yahoo Finance API | Periodic | Daily rolling 52W | No | No | Rolling 52 weeks | — |
 | **52-Week Low** | Yahoo Finance API | Periodic | Daily rolling 52W | No | No | Rolling 52 weeks | — |
-| **52W Low Recovery %** | MarketPulse Engine | Calculated| Daily with LTP | Yes | No | Current session | — |
-| **ATH Drawdown %** | MarketPulse Engine | Calculated| Daily with LTP | Yes | No | Current session | — |
-| **1-Day Return %** | MarketPulse Engine | Dynamic | Daily with LTP | Yes (Day Change %)| No | Prior trading day | — |
-| **1-Week Return %** | MarketPulse Engine | Periodic | Daily with LTP | Yes (7-day lookback)| No | 7 days ago | — |
-| **1-Month Return %** | MarketPulse Engine | Periodic | Daily with LTP | Yes (1-mo lookback)| No | 1 month ago | — |
-| **3-Month Return %** | MarketPulse Engine | Periodic | Daily with LTP | Yes (3-mo lookback)| No | 3 months ago | — |
-| **6-Month Return %** | MarketPulse Engine | Periodic | Daily with LTP | Yes (6-mo lookback)| No | 6 months ago | — |
-| **1-Year Return %** | MarketPulse Engine | Periodic | Daily with LTP | Yes (1-yr lookback)| No | 1 year ago | — |
-| **3-Year Return %** | MarketPulse Engine | Periodic | Daily with LTP | Yes (3-yr lookback)| No | 3 years ago | — |
-| **5-Year Return %** | MarketPulse Engine | Periodic | Daily with LTP | Yes (5-yr lookback)| No | 5 years ago | — |
-| **ALL (Lifetime Return %)**| MarketPulse Engine | Periodic | Daily with LTP | Yes (From Inception)| No| First trading day | — |
-| **Sector Advance/Decline** | MarketPulse Rollup | Dynamic | Live market hours | Yes (Breadth count)| No | Live market time | 0 |
+| **52W Low Recovery %** | The Lal Street Engine | Calculated| Daily with LTP | Yes | No | Current session | — |
+| **ATH Drawdown %** | The Lal Street Engine | Calculated| Daily with LTP | Yes | No | Current session | — |
+| **1-Day Return %** | The Lal Street Engine | Dynamic | Daily with LTP | Yes (Day Change %)| No | Prior trading day | — |
+| **1-Week Return %** | The Lal Street Engine | Periodic | Daily with LTP | Yes (7-day lookback)| No | 7 days ago | — |
+| **1-Month Return %** | The Lal Street Engine | Periodic | Daily with LTP | Yes (1-mo lookback)| No | 1 month ago | — |
+| **3-Month Return %** | The Lal Street Engine | Periodic | Daily with LTP | Yes (3-mo lookback)| No | 3 months ago | — |
+| **6-Month Return %** | The Lal Street Engine | Periodic | Daily with LTP | Yes (6-mo lookback)| No | 6 months ago | — |
+| **1-Year Return %** | The Lal Street Engine | Periodic | Daily with LTP | Yes (1-yr lookback)| No | 1 year ago | — |
+| **3-Year Return %** | The Lal Street Engine | Periodic | Daily with LTP | Yes (3-yr lookback)| No | 3 years ago | — |
+| **5-Year Return %** | The Lal Street Engine | Periodic | Daily with LTP | Yes (5-yr lookback)| No | 5 years ago | — |
+| **ALL (Lifetime Return %)**| The Lal Street Engine | Periodic | Daily with LTP | Yes (From Inception)| No| First trading day | — |
+| **Sector Advance/Decline** | The Lal Street Rollup | Dynamic | Live market hours | Yes (Breadth count)| No | Live market time | 0 |
 
 ---
 
 ## 8. Stock Terms
 
-Clear, simple definitions for every equity term used across MarketPulse:
+Clear, simple definitions for every equity term used across The Lal Street:
 
 - **Company Name**: The legal name of the corporation (e.g. *Reliance Industries Ltd.*, *Tata Consultancy Services Ltd.*).
 - **NSE Symbol**: The unique trading ticker assigned to the stock on the National Stock Exchange of India (e.g. `RELIANCE.NS`, `TCS.NS`).
@@ -318,7 +318,7 @@ Clear, simple definitions for every equity term used across MarketPulse:
 
 ## 9. Stock Rankings
 
-MarketPulse assigns a single, authoritative national market ranking to every Indian equity: **India Stock Rank** (`indiaStockRank`).
+The Lal Street assigns a single, authoritative national market ranking to every Indian equity: **India Stock Rank** (`indiaStockRank`).
 
 ### How India Stock Rank Works
 1. **Universe Scope**: The ranking encompasses the entire deduplicated Indian equity universe of **12,536 listed companies** across NSE and BSE.
@@ -350,11 +350,11 @@ MarketPulse assigns a single, authoritative national market ranking to every Ind
 ## 10. Stock Star Marking
 
 ### Official System Disclosure
-**MarketPulse does NOT currently calculate, assign, or display an independent star rating or letter grade for individual stocks.**
+**The Lal Street does NOT currently calculate, assign, or display an independent star rating or letter grade for individual stocks.**
 
-### Why MarketPulse Does Not Assign Stock Star Ratings
-1. **Zero Subjective Editorializing**: Unlike retail promotional portals that attach arbitrary 5-star badges or algorithmic buy signals to stocks, MarketPulse maintains an objective research standard.
-2. **Transparent Accounting-Grade Data**: Instead of simplifying complex corporations into a single star rating, MarketPulse provides complete, unadulterated fundamental numbers: national market cap rank, reported revenue, same-quarter YoY growth, operating margin, debt ratios, and multi-period price returns.
+### Why The Lal Street Does Not Assign Stock Star Ratings
+1. **Zero Subjective Editorializing**: Unlike retail promotional portals that attach arbitrary 5-star badges or algorithmic buy signals to stocks, The Lal Street maintains an objective research standard.
+2. **Transparent Accounting-Grade Data**: Instead of simplifying complex corporations into a single star rating, The Lal Street provides complete, unadulterated fundamental numbers: national market cap rank, reported revenue, same-quarter YoY growth, operating margin, debt ratios, and multi-period price returns.
 3. **User Empowerment**: Investors and analysts evaluate companies based on their own criteria (e.g. valuation, growth, debt safety) rather than relying on black-box ratings.
 4. **Display Behavior**: Stock cards and constituent tables display verified market metrics and national rank (`#1`, `#2`), with zero promotional star decorations.
 
@@ -362,7 +362,7 @@ MarketPulse assigns a single, authoritative national market ranking to every Ind
 
 ## 11. Stock Calculations
 
-MarketPulse applies deterministic mathematical formulas to calculate equity metrics.
+The Lal Street applies deterministic mathematical formulas to calculate equity metrics.
 
 ### 1. Reported Operating Profit (EBIT in ₹ Cr)
 - **Explanation**: Earnings Before Interest and Taxes represents the core operational profit of a non-financial corporation before capital structure decisions and taxes.
@@ -455,9 +455,9 @@ Revenue YoY % = ─────────────────────�
                              |Same Quarter Last Year Revenue|
 ```
 - **Strict Data Integrity Rules**:
-  - *Never Sequential QoQ*: MarketPulse NEVER compares Q2 with Q1 to generate YoY growth.
+  - *Never Sequential QoQ*: The Lal Street NEVER compares Q2 with Q1 to generate YoY growth.
   - *Absolute Value Denominator*: Uses |Same Quarter Last Year Revenue| in the denominator to guarantee mathematical safety.
-  - *Missing Prior Quarter*: If the exact same quarter from the prior year is missing, the calculation immediately evaluates to missing and displays as **—**. MarketPulse NEVER substitutes an adjacent quarter.
+  - *Missing Prior Quarter*: If the exact same quarter from the prior year is missing, the calculation immediately evaluates to missing and displays as **—**. The Lal Street NEVER substitutes an adjacent quarter.
 
 ### 9. Quarterly Net Profit YoY Methodology
 - **Formula**:
@@ -475,7 +475,7 @@ Net Profit YoY % = ────────────────────�
 
 ## 12. Stock Performance
 
-MarketPulse tracks stock price performance across 9 standardized time horizons:
+The Lal Street tracks stock price performance across 9 standardized time horizons:
 **1D (Day Change), 1W, 1M, 3M, 6M, 1Y, 3Y, 5Y, and ALL (Lifetime Inception)**.
 
 ### General Price Return Formula
@@ -532,13 +532,13 @@ Market Capitalization = Current Share Price × Total Outstanding Shares
 Market Cap (₹ Cr) = ────────────────────────────
                              10,000,000
 ```
-- **Data Source**: MarketPulse ingests full market capitalization directly from the exchange market feed (Yahoo Finance / BSE) and normalizes it into standard ₹ Crores (1 Cr = 10,000,000 INR). MarketPulse does not invent share counts.
+- **Data Source**: The Lal Street ingests full market capitalization directly from the exchange market feed (Yahoo Finance / BSE) and normalizes it into standard ₹ Crores (1 Cr = 10,000,000 INR). The Lal Street does not invent share counts.
 
 ---
 
 ## 13. Stock Screener
 
-The MarketPulse Stock Screener allows investors and analysts to filter the 12,536 Indian equities universe across 25+ quantitative parameters simultaneously.
+The The Lal Street Stock Screener allows investors and analysts to filter the 12,536 Indian equities universe across 25+ quantitative parameters simultaneously.
 
 ### Implemented Screener Filters
 
@@ -584,7 +584,7 @@ The MarketPulse Stock Screener allows investors and analysts to filter the 12,53
 - **Neutral Terminology**: Results are labeled as *Matches criteria* or *Research candidate*. The screener never produces labels such as *Strong Buy*, *Undervalued Gem*, or *Target Price*.
 
 ### Screener Direct Parameter Boundaries (Zero Synthetic Normalization)
-MarketPulse does NOT transform fundamental metrics into synthetic composite scores, curve-fitted percentiles, or proprietary black-box ratings. Every screener filter applies deterministic inequality boundaries directly to verified raw data:
+The Lal Street does NOT transform fundamental metrics into synthetic composite scores, curve-fitted percentiles, or proprietary black-box ratings. Every screener filter applies deterministic inequality boundaries directly to verified raw data:
 ```formula
 minThreshold ≤ Observed Metric Value ≤ maxThreshold
 ```
@@ -597,7 +597,7 @@ Missing data is never imputed as 0 or given a placeholder average; if a metric i
 ### Data Limitations
 1. **Market Feed Latency**: Prices reflect live or delayed market data depending on the underlying feed (typically carrying an exchange delay of up to 15 minutes during trading sessions).
 2. **Quarterly Reporting Cycle**: Companies report financial results every 3 months. Data remains unchanged between filing periods.
-3. **Consolidated vs Standalone Differences**: MarketPulse prioritizes consolidated numbers (which include subsidiary operations). For holding companies or companies without subsidiaries, standalone statements are utilized.
+3. **Consolidated vs Standalone Differences**: The Lal Street prioritizes consolidated numbers (which include subsidiary operations). For holding companies or companies without subsidiaries, standalone statements are utilized.
 4. **Historical Trading Depth**: Newly listed companies (IPOs) lack multi-year historical price series; long-term returns (3Y, 5Y) will be empty until sufficient trading history elapses.
 
 ### Missing Data Rules for Equities
@@ -606,7 +606,7 @@ Missing data is never imputed as 0 or given a placeholder average; if a metric i
 - Missing YoY %: Displayed as —.
 - Negative P/E (Loss-making companies): Displayed as —.
 - Operating Income for Financial Institutions: Displayed as —.
-- **Zero Fabrication**: MarketPulse strictly prohibits guessing, averaging, or simulating missing stock metrics.
+- **Zero Fabrication**: The Lal Street strictly prohibits guessing, averaging, or simulating missing stock metrics.
 
 
 
@@ -618,7 +618,7 @@ Missing data is never imputed as 0 or given a placeholder average; if a metric i
 
 ## 15. Mutual Fund Overview
 
-MarketPulse delivers institutional-grade mutual fund intelligence designed specifically for Indian fund investors and research analysts.
+The Lal Street delivers institutional-grade mutual fund intelligence designed specifically for Indian fund investors and research analysts.
 
 ### Scope of Coverage
 - **2,743 Active Direct-Growth Schemes**: Sourced directly from the official Association of Mutual Funds in India (AMFI) database across 40 asset management houses.
@@ -627,7 +627,7 @@ MarketPulse delivers institutional-grade mutual fund intelligence designed speci
   2. *Hybrid Schemes* (Balanced Advantage, Aggressive Hybrid, Multi Asset Allocation, Arbitrage).
   3. *Debt Schemes* (Liquid, Corporate Bond, Banking & PSU, Gilt, Short Duration).
   4. *Solution Oriented & Other Schemes* (Retirement, Children, Index, ETFs).
-- **The Direct-Growth Standard**: MarketPulse focuses strictly on **Direct Growth** plans.
+- **The Direct-Growth Standard**: The Lal Street focuses strictly on **Direct Growth** plans.
   - *Direct Plans* bypass intermediary distributor commissions, ensuring higher compounding net returns for long-term investors.
   - *Growth Options* reinvest all dividends and capital profits back into the fund's NAV, providing a pure, unfragmented measure of total compound performance.
 
@@ -635,14 +635,14 @@ MarketPulse delivers institutional-grade mutual fund intelligence designed speci
 
 ## 16. Mutual Fund Sources
 
-MarketPulse integrates 5 primary regulatory and market data feeds for mutual funds:
+The Lal Street integrates 5 primary regulatory and market data feeds for mutual funds:
 
 ### 1. FinAPI (Upvaly) — Primary Mutual Fund Holdings & Portfolio Engine
 - **Endpoint**: `https://finapi.upvaly.com/api/mf/scheme-code/:schemeCode`
 - **Data Provided**: Mutual fund stock portfolios, constituent equity holdings, position weights (%), market values (₹ Cr), sector allocation / weightings, fund expense ratio, 52-week high/low, P/E, P/B, and verified scheme AUM.
 - **Data Type**: Authoritative REST API service.
 - **Update Frequency**: Synchronized periodically and monthly upon AMC portfolio disclosures.
-- **Role in MarketPulse**: Authoritative primary provider for mutual fund stock portfolio holdings. When a scheme is queried, MarketPulse queries FinAPI (Upvaly) first to retrieve authentic constituent stock holdings, weights, and sector weightings.
+- **Role in The Lal Street**: Authoritative primary provider for mutual fund stock portfolio holdings. When a scheme is queried, The Lal Street queries FinAPI (Upvaly) first to retrieve authentic constituent stock holdings, weights, and sector weightings.
 
 ### 2. Association of Mutual Funds in India (AMFI)
 - **Data Provided**: Official daily Net Asset Values (NAV), NAV dates, 6-digit numeric scheme codes, ISINs, and formal scheme category designations.
@@ -654,24 +654,24 @@ MarketPulse integrates 5 primary regulatory and market data feeds for mutual fun
 - **Data Provided**: Official portfolio holdings, constituent equity weights (%), debt instruments, commercial paper, treasury bills, cash & TREPS positions, and total scheme AUM in ₹ Crores.
 - **Data Type**: Official monthly regulatory Excel/CSV portfolio disclosures filed under SEBI regulations.
 - **Update Frequency**: Monthly, typically between the 5th and 10th of each calendar month.
-- **Role in MarketPulse**: Direct filing supplement and offline fallback source for flagship Indian mutual fund schemes across Parag Parikh, HDFC, ICICI Prudential, and SBI fund houses.
+- **Role in The Lal Street**: Direct filing supplement and offline fallback source for flagship Indian mutual fund schemes across Parag Parikh, HDFC, ICICI Prudential, and SBI fund houses.
 
 ### 4. Reserve Bank of India (RBI) Benchmark Macro Data
 - **Data Provided**: Sovereign 91-Day Treasury Bill (T-Bill) yields and policy rates.
 - **Data Type**: Sovereign government debt benchmark.
-- **Use in MarketPulse**: Serves as the authoritative Risk-Free Rate (Rf) and Minimum Acceptable Return (MAR) in all Sharpe and Sortino ratio calculations.
+- **Use in The Lal Street**: Serves as the authoritative Risk-Free Rate (Rf) and Minimum Acceptable Return (MAR) in all Sharpe and Sortino ratio calculations.
 - **Update Frequency**: Updated following RBI primary treasury bill auctions.
 
 ### 5. MFAPI Historical NAV Repository
 - **Data Provided**: Full historical daily NAV time series from each fund's inception date.
 - **Data Type**: Cached historical time series.
-- **Use in MarketPulse**: Powers multi-year return algorithms (1Y, 3Y, 5Y, Since Inception CAGR), monthly volatility modeling, and maximum drawdown tracking.
+- **Use in The Lal Street**: Powers multi-year return algorithms (1Y, 3Y, 5Y, Since Inception CAGR), monthly volatility modeling, and maximum drawdown tracking.
 
 ---
 
 ## 17. Mutual Fund Data Behavior
 
-The following comprehensive table details every mutual fund metric implemented on MarketPulse:
+The following comprehensive table details every mutual fund metric implemented on The Lal Street:
 
 | Metric Name | Primary Source | Data Type | Update Frequency | Calculated? | Manual? | As-Of Date | Missing Data Rule |
 |---|---|---|---|:---:|:---:|---|---|
@@ -686,30 +686,30 @@ The following comprehensive table details every mutual fund metric implemented o
 | **Current NAV (₹)** | AMFI Official Feed | Dynamic | Daily (9-11 PM IST)| No | No | Latest trade day | — |
 | **NAV Date** | AMFI Official Feed | Periodic | Daily | No | No | Latest trade day | — |
 | **Scheme AUM (₹ Cr)**| FinAPI / AMC Disclosure| Periodic | Monthly | Yes (Normalized) | No | Month-end filing | — |
-| **Global AUM Rank** | MarketPulse Engine | Calculated| Monthly / Session | Yes (AUM DESC) | No | Active cache | — (if AUM missing) |
-| **Category AUM Rank**| MarketPulse Engine | Calculated| Monthly / Session | Yes (Within Cat) | No | Active cache | — (if AUM missing) |
-| **Subcategory Rank**| MarketPulse Engine | Calculated| Monthly / Session | Yes (Within Sub) | No | Active cache | — (if AUM missing) |
-| **Sector / Theme Rank**| MarketPulse Engine | Calculated| Monthly / Session | Yes (Within Sec) | No | Active cache | — (if AUM missing) |
-| **Star Marking (★)**| MarketPulse Engine | Calculated| Daily with NAVs | Yes (3-Way Rule) | No | Active session | Non-starred |
-| **1-Day Return %** | MarketPulse Engine | Dynamic | Daily with NAV | Yes (Day change) | No | Prior trade day | — |
-| **1-Week Return %** | MarketPulse Engine | Periodic | Daily with NAV | Yes (7-day lookback)| No | 7 days ago | — |
-| **1-Month Return %** | MarketPulse Engine | Periodic | Daily with NAV | Yes (1-mo lookback)| No | 1 month ago | — |
-| **3-Month Return %** | MarketPulse Engine | Periodic | Daily with NAV | Yes (3-mo lookback)| No | 3 months ago | — |
-| **6-Month Return %** | MarketPulse Engine | Periodic | Daily with NAV | Yes (6-mo lookback)| No | 6 months ago | — |
-| **1-Year Return %** | MarketPulse Engine | Periodic | Daily with NAV | Yes (Absolute/CAGR)| No | 1 year ago | — |
-| **3-Year CAGR %** | MarketPulse Engine | Periodic | Daily with NAV | Yes (Annualized) | No | 3 years ago | — (< 3Y history)|
-| **5-Year CAGR %** | MarketPulse Engine | Periodic | Daily with NAV | Yes (Annualized) | No | 5 years ago | — (< 5Y history)|
-| **Since Inception CAGR**| MarketPulse Engine | Periodic | Daily with NAV | Yes (Annualized) | No | Fund launch date | — (< 360 days) |
-| **Volatility (Annual)**| MarketPulse Engine | Periodic | Daily / Monthly | Yes (Monthly stddev)| No | 36-mo rolling | — (< 3Y history)|
-| **3Y Trailing Sharpe** | MarketPulse Engine | Periodic | Daily / Monthly | Yes (Excess return) | No | 36-mo rolling | Inception fallback |
-| **3Y Trailing Sortino**| MarketPulse Engine | Periodic | Daily / Monthly | Yes (Downside dev) | No | 36-mo rolling | Inception fallback |
-| **Beta** | MarketPulse Engine | Periodic | Monthly | Yes (vs Nifty 50) | No | 36-mo rolling | 1.0 (fallback when history unavailable) |
-| **Jensen's Alpha %** | MarketPulse Engine | Periodic | Monthly | Yes (vs Nifty 50) | No | 36-mo rolling | — |
-| **Maximum Drawdown %**| MarketPulse Engine | Periodic | Daily / Monthly | Yes (Peak-to-trough)| No | Full NAV series | — |
+| **Global AUM Rank** | The Lal Street Engine | Calculated| Monthly / Session | Yes (AUM DESC) | No | Active cache | — (if AUM missing) |
+| **Category AUM Rank**| The Lal Street Engine | Calculated| Monthly / Session | Yes (Within Cat) | No | Active cache | — (if AUM missing) |
+| **Subcategory Rank**| The Lal Street Engine | Calculated| Monthly / Session | Yes (Within Sub) | No | Active cache | — (if AUM missing) |
+| **Sector / Theme Rank**| The Lal Street Engine | Calculated| Monthly / Session | Yes (Within Sec) | No | Active cache | — (if AUM missing) |
+| **Star Marking (★)**| The Lal Street Engine | Calculated| Daily with NAVs | Yes (3-Way Rule) | No | Active session | Non-starred |
+| **1-Day Return %** | The Lal Street Engine | Dynamic | Daily with NAV | Yes (Day change) | No | Prior trade day | — |
+| **1-Week Return %** | The Lal Street Engine | Periodic | Daily with NAV | Yes (7-day lookback)| No | 7 days ago | — |
+| **1-Month Return %** | The Lal Street Engine | Periodic | Daily with NAV | Yes (1-mo lookback)| No | 1 month ago | — |
+| **3-Month Return %** | The Lal Street Engine | Periodic | Daily with NAV | Yes (3-mo lookback)| No | 3 months ago | — |
+| **6-Month Return %** | The Lal Street Engine | Periodic | Daily with NAV | Yes (6-mo lookback)| No | 6 months ago | — |
+| **1-Year Return %** | The Lal Street Engine | Periodic | Daily with NAV | Yes (Absolute/CAGR)| No | 1 year ago | — |
+| **3-Year CAGR %** | The Lal Street Engine | Periodic | Daily with NAV | Yes (Annualized) | No | 3 years ago | — (< 3Y history)|
+| **5-Year CAGR %** | The Lal Street Engine | Periodic | Daily with NAV | Yes (Annualized) | No | 5 years ago | — (< 5Y history)|
+| **Since Inception CAGR**| The Lal Street Engine | Periodic | Daily with NAV | Yes (Annualized) | No | Fund launch date | — (< 360 days) |
+| **Volatility (Annual)**| The Lal Street Engine | Periodic | Daily / Monthly | Yes (Monthly stddev)| No | 36-mo rolling | — (< 3Y history)|
+| **3Y Trailing Sharpe** | The Lal Street Engine | Periodic | Daily / Monthly | Yes (Excess return) | No | 36-mo rolling | Inception fallback |
+| **3Y Trailing Sortino**| The Lal Street Engine | Periodic | Daily / Monthly | Yes (Downside dev) | No | 36-mo rolling | Inception fallback |
+| **Beta** | The Lal Street Engine | Periodic | Monthly | Yes (vs Nifty 50) | No | 36-mo rolling | 1.0 (fallback when history unavailable) |
+| **Jensen's Alpha %** | The Lal Street Engine | Periodic | Monthly | Yes (vs Nifty 50) | No | 36-mo rolling | — |
+| **Maximum Drawdown %**| The Lal Street Engine | Periodic | Daily / Monthly | Yes (Peak-to-trough)| No | Full NAV series | — |
 | **Expense Ratio %** | FinAPI / AMC Factsheet| Periodic | Monthly | No | No | Monthly report | — |
 | **Portfolio Holdings**| FinAPI (Upvaly) / AMC | Periodic | Monthly | No | No | Month-end filing | Data unavailable|
 | **Holding Weight %** | FinAPI (Upvaly) / AMC | Periodic | Monthly | No (Direct) | No | Month-end filing | Data unavailable|
-| **Holding Rank** | MarketPulse Engine (FinAPI)| Calculated| Monthly | Yes (Weight DESC)| No | Month-end filing | Data unavailable|
+| **Holding Rank** | The Lal Street Engine (FinAPI)| Calculated| Monthly | Yes (Weight DESC)| No | Month-end filing | Data unavailable|
 | **Sector Allocation %**| FinAPI (Upvaly) / AMC | Calculated| Monthly | Yes (Weight sum) | No | Month-end filing | Data unavailable|
 | **Portfolio P/E & P/B**| FinAPI (Upvaly) | Periodic | Monthly | No (Direct) | No | Monthly report | — |
 
@@ -717,7 +717,7 @@ The following comprehensive table details every mutual fund metric implemented o
 
 ## 18. Mutual Fund Terms
 
-Clear, simple definitions for every mutual fund term used across MarketPulse:
+Clear, simple definitions for every mutual fund term used across The Lal Street:
 
 - **Net Asset Value (NAV)**: The price of one single unit of the mutual fund scheme, representing the per-unit market value of all underlying investments after subtracting operating expenses.
 - **Assets Under Management (AUM)**: The total market value of all investor capital currently managed by the fund, expressed in ₹ Crores.
@@ -736,7 +736,7 @@ Clear, simple definitions for every mutual fund term used across MarketPulse:
 - **Portfolio Concentration**: A risk metric measuring how much of the fund is concentrated in its Top 5 or Top 10 largest holdings.
 - **Compound Annual Growth Rate (CAGR)**: The annualized constant rate of return required for an investment to grow from its initial value to its final value over multiple years.
 - **Annualized Volatility**: A statistical measure of how wildly or smoothly a fund's returns fluctuate month to month. Higher volatility means larger price swings.
-- **Sector Provenance Tier**: The 5-tier classification hierarchy used by MarketPulse to assign economic sectors to equities with zero fabricated certainty: Tier 1 (EXCHANGE_CLASSIFICATION), Tier 2 (OFFICIAL_DISCLOSURE), Tier 3 (VERIFIED_SNAPSHOT), Tier 4 (HEURISTIC_FALLBACK), and Tier 5 (UNMAPPED).
+- **Sector Provenance Tier**: The 5-tier classification hierarchy used by The Lal Street to assign economic sectors to equities with zero fabricated certainty: Tier 1 (EXCHANGE_CLASSIFICATION), Tier 2 (OFFICIAL_DISCLOSURE), Tier 3 (VERIFIED_SNAPSHOT), Tier 4 (HEURISTIC_FALLBACK), and Tier 5 (UNMAPPED).
 - **Sharpe Ratio**: A risk-adjusted performance score showing how much extra return a fund generated above the risk-free rate for each unit of total volatility risk taken.
 - **Sortino Ratio**: A refined risk score that penalizes only bad downside volatility (losses below the risk-free benchmark), ignoring positive upward price surges.
 - **Beta**: A measure of a fund's price sensitivity compared to the broad stock market index (Nifty 50 TRI).
@@ -747,7 +747,7 @@ Clear, simple definitions for every mutual fund term used across MarketPulse:
 
 ## 19. Mutual Fund Rankings
 
-MarketPulse implements a deterministic, multi-level ranking hierarchy for mutual funds based strictly on verified scheme scale:
+The Lal Street implements a deterministic, multi-level ranking hierarchy for mutual funds based strictly on verified scheme scale:
 
 ```formula
 Ranking Input = Scheme AUM in ₹ Crores (DESC)
@@ -787,7 +787,7 @@ This 4-tier structure allows users to evaluate a fund's scale from the national 
 ## 20. Mutual Fund Star Marking
 
 ### The Official 3-Way Star Algorithm
-MarketPulse identifies outstanding long-term performers within each mutual fund subcategory using a deterministic **3-Way Star Algorithm** executed by the MarketPulse ranking engine.
+The Lal Street identifies outstanding long-term performers within each mutual fund subcategory using a deterministic **3-Way Star Algorithm** executed by the The Lal Street ranking engine.
 
 A fund receives the **Gold Star Badge (★)** if and only if it qualifies through the following strict mathematical criteria:
 
@@ -826,7 +826,7 @@ Step 4: Top 3 schemes receive the Gold Star Badge (★)
 
 ## 21. Mutual Fund Performance
 
-MarketPulse computes mutual fund returns across 7 standard horizons:
+The Lal Street computes mutual fund returns across 7 standard horizons:
 **1M, 3M, 6M, 1Y, 3Y, 5Y, and ALL (Since Inception)**.
 
 ### 1. Monthly NAV Return (Ri)
@@ -852,7 +852,7 @@ CAGR % = [ (Current NAV ÷ Historical Benchmark NAV) ^ (365.25 ÷ Number of Days
 ```
 
 ### Calendar Mechanics & Precision
-- **Leap-Year Normalization**: MarketPulse uses **365.25 days** in the exponent to account accurately for leap years over multi-year horizons.
+- **Leap-Year Normalization**: The Lal Street uses **365.25 days** in the exponent to account accurately for leap years over multi-year horizons.
 - **Calendar Lookback Windows**:
   - *1M*: Exactly 1 calendar month ago (e.g. Aug 12 to Sep 12).
   - *3M*: Exactly 3 calendar months ago.
@@ -869,7 +869,7 @@ CAGR % = [ (Current NAV ÷ Historical Benchmark NAV) ^ (365.25 ÷ Number of Days
 
 ## 22. Mutual Fund Risk Metrics
 
-MarketPulse computes accounting-grade risk ratios aligned with official Reserve Bank of India (RBI) sovereign benchmarks.
+The Lal Street computes accounting-grade risk ratios aligned with official Reserve Bank of India (RBI) sovereign benchmarks.
 
 ### 1. Annualized Volatility (Standard Deviation)
 - **Explanation**: Measures how much a fund's monthly returns swing around their average. Low volatility indicates a smooth ride; high volatility indicates sharp swings.
@@ -928,7 +928,7 @@ Beta = ───────────────────────
   - *Beta > 1.0*: The fund is more volatile than the market.
   - *Beta < 1.0*: The fund is less volatile and cushions market swings.
 - **Fallback Value & Integrity Notice**:
-  When a fund has fewer than 36 monthly returns or benchmark return series are unavailable, 1.0 may be a fallback value when required benchmark/history data is unavailable. It does not necessarily represent a measured Beta of exactly 1.0. MarketPulse never presents unmeasured fallback values as empirical regressions.
+  When a fund has fewer than 36 monthly returns or benchmark return series are unavailable, 1.0 may be a fallback value when required benchmark/history data is unavailable. It does not necessarily represent a measured Beta of exactly 1.0. The Lal Street never presents unmeasured fallback values as empirical regressions.
 
 ### 5. Jensen's Alpha
 - **Explanation**: Measures the excess return generated by the fund manager above the return predicted by the fund's market risk (Beta).
@@ -952,7 +952,7 @@ Maximum Drawdown % = ───────────────────�
 
 ## 23. Mutual Fund Portfolio Holdings
 
-MarketPulse provides verified portfolio transparency for Indian mutual fund schemes, fetching fund stock portfolios, constituent equity holdings, and sector weightings primarily from **FinAPI (Upvaly)** (`https://finapi.upvaly.com`), supplemented by official AMC monthly disclosures.
+The Lal Street provides verified portfolio transparency for Indian mutual fund schemes, fetching fund stock portfolios, constituent equity holdings, and sector weightings primarily from **FinAPI (Upvaly)** (`https://finapi.upvaly.com`), supplemented by official AMC monthly disclosures.
 
 ### Where Holdings Come From
 - **Primary Live Provider: FinAPI (Upvaly)**: Queried dynamically via `https://finapi.upvaly.com/api/mf/scheme-code/:schemeCode`. It returns authentic constituent stock positions with company names, weight percentages, market values (₹ Cr), and sector allocations.
@@ -967,7 +967,7 @@ MarketPulse provides verified portfolio transparency for Indian mutual fund sche
    - `marketValue`: Disclosed market valuation in ₹ Crores.
    - `sector`: Standardized economic sector assigned to the holding.
 3. **Sector Breakdown**: Sector allocations are aggregated directly from the disclosed holdings or ingested from the API's `sector_weightings` payload.
-4. **Fallback Handling**: If FinAPI (Upvaly) is temporarily unreachable or has not yet cataloged disclosures for a flagship fund, MarketPulse falls back to its local AMC disclosure cache.
+4. **Fallback Handling**: If FinAPI (Upvaly) is temporarily unreachable or has not yet cataloged disclosures for a flagship fund, The Lal Street falls back to its local AMC disclosure cache.
 
 ### Asset Classes Monitored
 1. **Indian Listed Equities**: Complete constituent stock positions (e.g. HDFC Bank, ICICI Bank, ITC, Infosys, Reliance Industries).
@@ -978,7 +978,7 @@ MarketPulse provides verified portfolio transparency for Indian mutual fund sche
 
 ### Holding Weight & Ranking Rules
 - **Direct Disclosed Weight**: Sourced exactly as reported by FinAPI (Upvaly) and AMC disclosures (e.g. `7.55%`).
-- **NO Artificial Renormalization**: MarketPulse NEVER artificially inflates equity holdings to force a 100% total. If equity holdings total 78.4% and cash is 21.6%, the exact reported percentages are displayed without distortion.
+- **NO Artificial Renormalization**: The Lal Street NEVER artificially inflates equity holdings to force a 100% total. If equity holdings total 78.4% and cash is 21.6%, the exact reported percentages are displayed without distortion.
 - **Fund Holding Rank Formula**:
 ```formula
 Holding Rank = Sort Index in { Fund Portfolio Holdings ordered by Position Weight DESC }
@@ -994,12 +994,12 @@ Sector Allocation % = Σ (Disclosed Position Weights of Holdings belonging to Se
 - *They are completely independent*: A mid-cap company ranked #180 nationally could be the #1 largest holding inside a Mid Cap fund.
 
 ### Supported Coverage vs Unsupported Schemes
-- MarketPulse queries FinAPI (Upvaly) as the primary holdings provider for all active mutual fund schemes.
+- The Lal Street queries FinAPI (Upvaly) as the primary holdings provider for all active mutual fund schemes.
 - Where FinAPI (Upvaly) or official AMC disclosures provide verified holdings, they are displayed with complete source provenance (`FinAPI (Upvaly)` or `Official AMC Disclosure`).
-- If neither FinAPI (Upvaly) nor official AMC filings contain disclosed portfolio holdings for a fund, MarketPulse strictly adheres to the **Zero-Fabrication Standard**: the holdings endpoint returns `DATA_UNAVAILABLE` with an empty position list rather than fabricating mock holdings.
+- If neither FinAPI (Upvaly) nor official AMC filings contain disclosed portfolio holdings for a fund, The Lal Street strictly adheres to the **Zero-Fabrication Standard**: the holdings endpoint returns `DATA_UNAVAILABLE` with an empty position list rather than fabricating mock holdings.
 
 ### Scheme AUM vs AMC AUM vs Industry AUM
-- **Scheme-Level AUM**: The total asset size of that specific mutual fund scheme (illustrative example: *Parag Parikh Flexi Cap Fund manages approximately ₹72,500 Cr as of mid-2026 reporting*). This is the number used for all MarketPulse AUM rankings.
+- **Scheme-Level AUM**: The total asset size of that specific mutual fund scheme (illustrative example: *Parag Parikh Flexi Cap Fund manages approximately ₹72,500 Cr as of mid-2026 reporting*). This is the number used for all The Lal Street AUM rankings.
 - **AMC Total AUM**: The aggregate assets managed across all funds by that entire fund house (illustrative example: *HDFC AMC manages over ₹6,50,000 Cr across all its schemes as of 2026*).
 - **Industry Total AUM**: The total value of all mutual fund assets in India across all AMCs (illustrative example: *over ₹65 Lakh Crores as of mid-2026*).
 
@@ -1007,10 +1007,10 @@ Sector Allocation % = Σ (Disclosed Position Weights of Holdings belonging to Se
 
 ## 24. Mutual Fund Screener
 
-The MarketPulse Mutual Fund Screener enables multi-factor filtering across the active Indian mutual fund universe.
+The The Lal Street Mutual Fund Screener enables multi-factor filtering across the active Indian mutual fund universe.
 
 ### Screener Direct Range Boundaries (Zero Synthetic Normalization)
-MarketPulse evaluates all mutual fund filters directly against verified empirical metrics without synthetic scaling or arbitrary scores:
+The Lal Street evaluates all mutual fund filters directly against verified empirical metrics without synthetic scaling or arbitrary scores:
 ```formula
 minThreshold ≤ Observed Scheme Metric ≤ maxThreshold
 ```
@@ -1055,12 +1055,12 @@ All matching schemes are labeled neutrally as *Matches criteria* or *Research ca
 
 ## 25. Mutual Fund Stock Weightage Screener
 
-The **Stock Weightage Screener** in MarketPulse establishes an institutional market-wide intelligence engine by inverting traditional fund research: instead of analyzing one mutual fund at a time to inspect its constituent holdings, the engine aggregates the Indian mutual fund universe from the **STOCK's perspective**.
+The **Stock Weightage Screener** in The Lal Street establishes an institutional market-wide intelligence engine by inverting traditional fund research: instead of analyzing one mutual fund at a time to inspect its constituent holdings, the engine aggregates the Indian mutual fund universe from the **STOCK's perspective**.
 
 ### 1. The Bi-Directional Relational Model
 Traditional retail mutual fund platforms only provide one-way, fund-centric views (e.g. *What does Fund X hold?*). Investors, quantitative analysts, and equity researchers seeking institutional ownership intelligence are left unable to evaluate systemic institutional capital commitments.
 
-MarketPulse implements a **Bi-Directional Relational Architecture**:
+The Lal Street implements a **Bi-Directional Relational Architecture**:
 1. **Direction 1: Stock ──> Funds (Institutional Aggregation)**:
    For any listed equity (e.g. HDFC Bank, Infosys, Reliance, Tata Motors):
    - Total number of mutual funds holding the stock (`fundsHoldingStock`)
@@ -1116,7 +1116,7 @@ The Stock Weightage Screener synthesizes data from four authoritative market reg
 ---
 
 ### 3. Fund Universe vs. Holdings Coverage (Critical Distinction)
-Under MarketPulse's strict **Zero-Fabrication Standard**, the engine enforces a mathematical and semantic distinction between the total eligible fund universe and the parsed holdings coverage:
+Under The Lal Street's strict **Zero-Fabrication Standard**, the engine enforces a mathematical and semantic distinction between the total eligible fund universe and the parsed holdings coverage:
 
 | Metric | Verified Value | Definition & Regulatory Provenance |
 |---|:---:|---|
@@ -1233,7 +1233,7 @@ When a user selects a specific category tab (e.g. Large Cap):
 
 ### 6. Security Master Integration & Validated Deduplication
 
-To eliminate raw alphanumeric ISIN identifiers (`INE...`) and resolve duplicate listings, MarketPulse integrated the official National Stock Exchange of India (NSE) master directory (`EQUITY_L.csv`) merged with 157 BSE scrip mappings and major REIT/InvIT/ETF listings.
+To eliminate raw alphanumeric ISIN identifiers (`INE...`) and resolve duplicate listings, The Lal Street integrated the official National Stock Exchange of India (NSE) master directory (`EQUITY_L.csv`) merged with 157 BSE scrip mappings and major REIT/InvIT/ETF listings.
 
 #### Mathematical Deduplication Equation:
 ```formula
@@ -1254,7 +1254,7 @@ To eliminate raw alphanumeric ISIN identifiers (`INE...`) and resolve duplicate 
 
 ### 7. 5-Tier Sector Provenance Hierarchy (Zero-Fabrication Standard)
 
-To maintain absolute data integrity and prevent arbitrary sector hallucinations, MarketPulse routes every security through a strict **5-Tier Sector Provenance Hierarchy**:
+To maintain absolute data integrity and prevent arbitrary sector hallucinations, The Lal Street routes every security through a strict **5-Tier Sector Provenance Hierarchy**:
 
 | Tier | Provenance Source | Confidence Level | Canonical Count | Description |
 |---|---|:---:|:---:|---|
@@ -1269,7 +1269,7 @@ To maintain absolute data integrity and prevent arbitrary sector hallucinations,
 ```formula
 740 High-Confidence Securities + 29 Heuristic Securities + 60 Unmapped Securities = 829 Canonical Securities
 ```
-- **Zero Fabrication**: If a security's sector cannot be authoritatively established, it is tagged as `Unknown / Unmapped`. MarketPulse never invents a sector to fill an empty cell.
+- **Zero Fabrication**: If a security's sector cannot be authoritatively established, it is tagged as `Unknown / Unmapped`. The Lal Street never invents a sector to fill an empty cell.
 
 ---
 
@@ -1340,13 +1340,13 @@ To deliver sub-second performance across thousands of securities and funds:
 
 ## 27. Dynamic / Periodic / Calculated / Static / Manual
 
-Understanding how data is classified on MarketPulse clarifies how often numbers update, where they originate, and how reliable they are.
+Understanding how data is classified on The Lal Street clarifies how often numbers update, where they originate, and how reliable they are.
 
 | Data Classification | Simple Definition | Concrete Platform Examples | Update Cadence |
 |---|---|---|---|
 | **DYNAMIC** | Live or delayed market feed data depending on the underlying feed that updates during active exchange trading hours. | Last Traded Price (LTP), Day Change (₹), Day Change %, Traded Volume, Live Sector Advances/Declines. | Seconds to minutes during 9:15 AM – 3:30 PM IST |
 | **PERIODIC** | Numbers officially released by companies, AMCs, or regulators at fixed, scheduled calendar intervals. | Daily AMFI NAVs, Monthly Scheme AUM, Monthly Portfolio Holdings, Quarterly Corporate Revenue and Profits. | Daily (nightly), Monthly (by the 10th), or Quarterly (earnings season) |
-| **CALCULATED** | Figures computed internally by MarketPulse formulas using primary source inputs. | Same-Quarter Revenue YoY %, 3Y CAGR, Sharpe Ratio, Sortino Ratio, India Stock Rank, Category AUM Rank. | Recomputed dynamically when underlying primary inputs update |
+| **CALCULATED** | Figures computed internally by The Lal Street formulas using primary source inputs. | Same-Quarter Revenue YoY %, 3Y CAGR, Sharpe Ratio, Sortino Ratio, India Stock Rank, Category AUM Rank. | Recomputed dynamically when underlying primary inputs update |
 | **STATIC** | Permanent or slowly evolving reference metadata identifying the corporate or fund entity. | Company Legal Name, NSE Symbol, BSE Scrip Code, ISIN, Sector ID, Scheme Inception Date, AMC Name. | Maintained permanently; updated only upon corporate actions or rebranding |
 | **MANUAL** | Verified administrative mapping dictionaries maintained to ensure cross-exchange integrity. | BSE Scrip to NSE Symbol mapping registry, sector basket constituent lists. | Updated by platform administrators upon index rebalances or new IPO listings |
 | **CACHED** | Validated data temporarily stored in fast in-memory storage to ensure sub-second page loads. | Sector overview summaries, ranked equities lists, mutual fund directory snapshots. | Automatically warmed and refreshed according to strict background TTL rules |
@@ -1356,61 +1356,61 @@ Understanding how data is classified on MarketPulse clarifies how often numbers 
 
 ## 28. Data Source vs Calculated Data
 
-MarketPulse maintains a clear line between data received directly from external feeds and data computed internally by the platform:
+The Lal Street maintains a clear line between data received directly from external feeds and data computed internally by the platform:
 
-| Financial Metric | Primary Source Data Origin | API / Regulatory Provider | Calculated by MarketPulse? | Update Type |
+| Financial Metric | Primary Source Data Origin | API / Regulatory Provider | Calculated by The Lal Street? | Update Type |
 |---|---|---|:---:|---|
 | **Stock Price (LTP)** | Direct exchange market feed | Yahoo Finance API (live / delayed feed) | No (Direct) | Dynamic |
 | **Previous Close** | Prior session closing price | Yahoo Finance API | No (Direct) | Periodic (Daily) |
 | **Market Capitalization** | Share price × Total shares | Yahoo Finance / Exchange | Yes (Unit normalized to ₹ Cr) | Dynamic |
-| **India Stock Rank** | Market Cap ranking across India | MarketPulse Ranking Engine | Yes (Sorted MCap DESC) | Dynamic / Daily |
+| **India Stock Rank** | Market Cap ranking across India | The Lal Street Ranking Engine | Yes (Sorted MCap DESC) | Dynamic / Daily |
 | **Quarterly Revenue** | Corporate financial filing / disclosure | BSE Filings / Yahoo Finance | No (Direct in ₹ Cr) | Periodic (Quarterly) |
-| **Revenue YoY %** | Current & prior same-quarter revenue | MarketPulse Financial Engine | Yes (Same-quarter formula) | Periodic (Quarterly) |
-| **Reported EBIT (₹ Cr)** | Revenue × Operating Margin | MarketPulse Accounting Engine| Yes (Rev × Margin ÷ 10^7) | Periodic (Quarterly) |
+| **Revenue YoY %** | Current & prior same-quarter revenue | The Lal Street Financial Engine | Yes (Same-quarter formula) | Periodic (Quarterly) |
+| **Reported EBIT (₹ Cr)** | Revenue × Operating Margin | The Lal Street Accounting Engine| Yes (Rev × Margin ÷ 10^7) | Periodic (Quarterly) |
 | **Operating Margin %** | Corporate income statement | BSE Filings / Corporate report| No (Direct ratio) | Periodic (Quarterly) |
 | **Net Profit (₹ Cr)** | Corporate income statement | BSE Filings / Corporate report| No (Direct in ₹ Cr) | Periodic (Quarterly) |
-| **Net Profit YoY %** | Current & prior same-quarter profit | MarketPulse Financial Engine | Yes (Same-quarter formula) | Periodic (Quarterly) |
-| **Stock Price Returns**| Historical closing price series | MarketPulse Return Engine | Yes (1W, 1M, 6M, 1Y, 3Y, 5Y, ALL)| Periodic (Daily) |
-| **52-Week Recovery %** | Current price and 52W low | MarketPulse Financial Engine | Yes ((LTP − 52W Low) ÷ 52W Low)| Dynamic |
-| **ATH Drawdown %** | Current price and all-time high | MarketPulse Financial Engine | Yes ((LTP − ATH) ÷ ATH) | Dynamic |
+| **Net Profit YoY %** | Current & prior same-quarter profit | The Lal Street Financial Engine | Yes (Same-quarter formula) | Periodic (Quarterly) |
+| **Stock Price Returns**| Historical closing price series | The Lal Street Return Engine | Yes (1W, 1M, 6M, 1Y, 3Y, 5Y, ALL)| Periodic (Daily) |
+| **52-Week Recovery %** | Current price and 52W low | The Lal Street Financial Engine | Yes ((LTP − 52W Low) ÷ 52W Low)| Dynamic |
+| **ATH Drawdown %** | Current price and all-time high | The Lal Street Financial Engine | Yes ((LTP − ATH) ÷ ATH) | Dynamic |
 | **Mutual Fund NAV** | Official daily NAV feed | AMFI Official Portal | No (Direct) | Periodic (Daily) |
 | **Scheme AUM (₹ Cr)** | Monthly AMC regulatory disclosure | FinAPI (Upvaly) / AMC Factsheet| Yes (Normalized to ₹ Cr) | Periodic (Monthly) |
-| **Global MF Rank** | Scheme AUM across all funds | MarketPulse Ranking Engine | Yes (Sorted AUM DESC) | Periodic (Monthly) |
-| **Category MF Rank** | Scheme AUM within broad category | MarketPulse Ranking Engine | Yes (Sorted AUM DESC in Cat) | Periodic (Monthly) |
-| **Subcategory MF Rank** | Scheme AUM within peer subcategory| MarketPulse Ranking Engine | Yes (Sorted AUM DESC in Sub) | Periodic (Monthly) |
-| **Star Marking (★)** | 5Y CAGR, Inception CAGR, AUM | MarketPulse Star Engine | Yes (3-Way Intersection Rule) | Periodic (Daily) |
-| **Fund Returns & CAGR** | Historical NAV time series | MarketPulse Return Engine | Yes (Absolute & Annualized) | Periodic (Daily) |
-| **Fund Volatility** | 36-month NAV returns | MarketPulse Risk Engine | Yes (Monthly std dev × sqrt(12))| Periodic (Daily) |
-| **Sharpe Ratio** | NAV returns & RBI 91D T-Bill | MarketPulse Risk Engine | Yes (Trailing 3Y excess return)| Periodic (Daily) |
-| **Sortino Ratio** | NAV returns & RBI 91D T-Bill | MarketPulse Risk Engine | Yes (Trailing 3Y downside dev) | Periodic (Daily) |
-| **Beta** | Fund returns vs Nifty 50 TRI | MarketPulse Risk Engine | Yes (Covariance ÷ Variance) | Periodic (Monthly) |
-| **Jensen's Alpha** | Fund return, Beta, Benchmark | MarketPulse Risk Engine | Yes (Alpha formulation) | Periodic (Monthly) |
-| **Maximum Drawdown** | Full historical NAV series | MarketPulse Risk Engine | Yes (Peak-to-trough drop) | Periodic (Daily) |
+| **Global MF Rank** | Scheme AUM across all funds | The Lal Street Ranking Engine | Yes (Sorted AUM DESC) | Periodic (Monthly) |
+| **Category MF Rank** | Scheme AUM within broad category | The Lal Street Ranking Engine | Yes (Sorted AUM DESC in Cat) | Periodic (Monthly) |
+| **Subcategory MF Rank** | Scheme AUM within peer subcategory| The Lal Street Ranking Engine | Yes (Sorted AUM DESC in Sub) | Periodic (Monthly) |
+| **Star Marking (★)** | 5Y CAGR, Inception CAGR, AUM | The Lal Street Star Engine | Yes (3-Way Intersection Rule) | Periodic (Daily) |
+| **Fund Returns & CAGR** | Historical NAV time series | The Lal Street Return Engine | Yes (Absolute & Annualized) | Periodic (Daily) |
+| **Fund Volatility** | 36-month NAV returns | The Lal Street Risk Engine | Yes (Monthly std dev × sqrt(12))| Periodic (Daily) |
+| **Sharpe Ratio** | NAV returns & RBI 91D T-Bill | The Lal Street Risk Engine | Yes (Trailing 3Y excess return)| Periodic (Daily) |
+| **Sortino Ratio** | NAV returns & RBI 91D T-Bill | The Lal Street Risk Engine | Yes (Trailing 3Y downside dev) | Periodic (Daily) |
+| **Beta** | Fund returns vs Nifty 50 TRI | The Lal Street Risk Engine | Yes (Covariance ÷ Variance) | Periodic (Monthly) |
+| **Jensen's Alpha** | Fund return, Beta, Benchmark | The Lal Street Risk Engine | Yes (Alpha formulation) | Periodic (Monthly) |
+| **Maximum Drawdown** | Full historical NAV series | The Lal Street Risk Engine | Yes (Peak-to-trough drop) | Periodic (Daily) |
 | **Portfolio Holdings** | Monthly fund stock portfolio | FinAPI (Upvaly) / AMC Disclosures| No (Direct) | Periodic (Monthly) |
 | **Holding Weight %** | Monthly fund stock portfolio | FinAPI (Upvaly) / AMC Disclosures| No (Direct reported %) | Periodic (Monthly) |
 | **Sector Allocation %**| Disclosed sector weights | FinAPI (Upvaly) / AMC Disclosures| Yes (Aggregated) | Periodic (Monthly) |
 | **Fund P/E and P/B** | Disclosed portfolio multiples | FinAPI (Upvaly) | No (Direct) | Periodic (Monthly) |
-| **MF Universe Weightage %** | Disclosed fund holdings & Universe AUM | MarketPulse Stock Weightage Engine | Yes (Holding Value ÷ Universe AUM) | Periodic (Monthly) |
-| **Total AUM Exposure (₹ Cr)** | Disclosed fund holdings & Scheme AUM | MarketPulse Stock Weightage Engine | Yes (Sum of Holding Values across funds) | Periodic (Monthly) |
-| **Number of Funds Holdings** | Disclosed mutual fund portfolios | MarketPulse Stock Weightage Engine | Yes (Count of distinct holding funds) | Periodic (Monthly) |
-| **Eligible Universe Funds** | AMFI Active Schemes Master | MarketPulse Fund Discovery Engine | Yes (Direct-Growth in 5 target categories) | Periodic (Daily/Monthly) |
-| **Funds with Verified Holdings** | Statutory AMC portfolio disclosures | MarketPulse Ingestion Pipeline | Yes (Count of schemes with parsed holdings) | Periodic (Monthly) |
-| **Holdings Coverage %** | Verified holdings & Eligible universe | MarketPulse Audit Engine | Yes ((Verified Funds ÷ Eligible Funds) × 100) | Periodic (Monthly) |
-| **Stock Sector Provenance** | Exchange masters & AMC disclosures | MarketPulse 5-Tier Provenance Engine | Yes (Tier 1-5 hierarchical classification) | Periodic (Monthly/Dynamic) |
+| **MF Universe Weightage %** | Disclosed fund holdings & Universe AUM | The Lal Street Stock Weightage Engine | Yes (Holding Value ÷ Universe AUM) | Periodic (Monthly) |
+| **Total AUM Exposure (₹ Cr)** | Disclosed fund holdings & Scheme AUM | The Lal Street Stock Weightage Engine | Yes (Sum of Holding Values across funds) | Periodic (Monthly) |
+| **Number of Funds Holdings** | Disclosed mutual fund portfolios | The Lal Street Stock Weightage Engine | Yes (Count of distinct holding funds) | Periodic (Monthly) |
+| **Eligible Universe Funds** | AMFI Active Schemes Master | The Lal Street Fund Discovery Engine | Yes (Direct-Growth in 5 target categories) | Periodic (Daily/Monthly) |
+| **Funds with Verified Holdings** | Statutory AMC portfolio disclosures | The Lal Street Ingestion Pipeline | Yes (Count of schemes with parsed holdings) | Periodic (Monthly) |
+| **Holdings Coverage %** | Verified holdings & Eligible universe | The Lal Street Audit Engine | Yes ((Verified Funds ÷ Eligible Funds) × 100) | Periodic (Monthly) |
+| **Stock Sector Provenance** | Exchange masters & AMC disclosures | The Lal Street 5-Tier Provenance Engine | Yes (Tier 1-5 hierarchical classification) | Periodic (Monthly/Dynamic) |
 
 ---
 
 ## 29. As-Of Date vs Update Date
 
-A fundamental concept on MarketPulse is the difference between an **As-Of Date** and an **Updated / Fetched Date**:
+A fundamental concept on The Lal Street is the difference between an **As-Of Date** and an **Updated / Fetched Date**:
 
 - **As-Of Date**: The official financial date that the number actually represents.
-- **Updated / Fetched Date**: The date and time when MarketPulse fetched, verified, and refreshed the number in its system.
+- **Updated / Fetched Date**: The date and time when The Lal Street fetched, verified, and refreshed the number in its system.
 
 ### Concrete Real-World Examples
 1. **Quarterly Revenue**:
    - *As-Of Date*: June 30, 2026 (the final day of the financial quarter being reported).
-   - *Fetched Date*: August 10, 2026 (the day the company filed its results with the exchange and MarketPulse updated its database).
+   - *Fetched Date*: August 10, 2026 (the day the company filed its results with the exchange and The Lal Street updated its database).
 2. **Mutual Fund Portfolio Holdings**:
    - *As-Of Date*: June 30, 2026 (the snapshot date of the fund's actual holdings).
    - *Fetched Date*: July 10, 2026 (the day the AMC published its monthly portfolio disclosure spreadsheet).
@@ -1424,7 +1424,7 @@ Users should always look at the **As-Of Date** to know what reporting period a f
 
 ## 30. Missing Data
 
-MarketPulse operates under an institutional **Zero-Fabrication Standard**.
+The Lal Street operates under an institutional **Zero-Fabrication Standard**.
 
 ### The Golden Rule: Missing Data Is Never Zero
 ```formula
@@ -1439,14 +1439,14 @@ Missing Data ≠ 0
 ### Concrete Presentation Rules
 1. **The Em-Dash (—)**: Whenever a data point is missing, unreported, mathematically non-computable, or unverified, it is strictly displayed as **—**.
 2. **Data Unavailable**: In portfolio holdings and factsheet panels, schemes without official AMC filing integration clearly display **Data unavailable**.
-3. **No Synthetic Fillers**: MarketPulse never generates synthetic stock prices, estimated revenues, placeholder PE ratios, or fake portfolio holdings.
+3. **No Synthetic Fillers**: The Lal Street never generates synthetic stock prices, estimated revenues, placeholder PE ratios, or fake portfolio holdings.
 4. **Screener Safety**: Missing values are excluded from numeric range filters. For example, filtering for `P/E < 25` will not include companies with missing P/E or negative earnings.
 
 ---
 
 ## 31. Formula Reference
 
-The master mathematical formula reference table for all calculated metrics across MarketPulse:
+The master mathematical formula reference table for all calculated metrics across The Lal Street:
 
 | Metric | Exact Mathematical Formula | Inputs | Frequency | Calculation Type |
 |---|---|---|---|---|
@@ -1492,20 +1492,20 @@ The master mathematical formula reference table for all calculated metrics acros
 ## 32. Data Quality
 
 ### The Zero-Fabrication Rulebook
-MarketPulse never intentionally creates fake financial numbers.
+The Lal Street never intentionally creates fake financial numbers.
 - **No fake stock prices**: Missing quotes evaluate strictly to —.
 - **No fake revenue or profit**: If an earnings release is delayed or unavailable, the quarterly cells display —.
 - **No fake NAVs**: NAVs update solely upon AMFI publication.
 - **No fake AUM**: Scheme scale reflects official AMC disclosures.
 - **No fake holdings**: Unsupported mutual fund holdings display *Data unavailable*.
 - **No fake rankings**: Unranked securities display —.
-- **No fake star ratings**: MarketPulse only awards stars based on verified 5Y and Inception CAGR and reported AUM.
+- **No fake star ratings**: The Lal Street only awards stars based on verified 5Y and Inception CAGR and reported AUM.
 
 ---
 
 ## 33. Research Interpretation
 
-### How to Interpret MarketPulse Data Responsibly
+### How to Interpret The Lal Street Data Responsibly
 1. **Combine Fundamentals with Valuation**: A company ranked #1 or with +40% Revenue YoY is not automatically an attractive purchase. Users must examine its valuation multiples (P/E, P/B, EV/EBITDA) and debt burden.
 2. **Examine Both Returns and Risk**: High 3-Year CAGR means little if accompanied by high volatility and severe drawdowns. Always cross-reference returns with Sharpe and Sortino ratios.
 3. **Respect Scheme Mandates**: A Small Cap fund will naturally exhibit higher volatility and larger drawdowns than a Large Cap or Balanced Advantage fund. Compare funds only within their direct peer group.
@@ -1516,7 +1516,7 @@ MarketPulse never intentionally creates fake financial numbers.
 
 ## 34. Complete Glossary
 
-- **AAUM (Average Assets Under Management)**: The arithmetic average of a mutual fund scheme's daily net asset values over a calendar month or quarter. In MarketPulse, AAUM is strictly isolated into `aaumCr` and is NEVER conflated with, displayed inside, or substituted for month-end scheme AUM (`aumCr`) or used in AUM rankings.
+- **AAUM (Average Assets Under Management)**: The arithmetic average of a mutual fund scheme's daily net asset values over a calendar month or quarter. In The Lal Street, AAUM is strictly isolated into `aaumCr` and is NEVER conflated with, displayed inside, or substituted for month-end scheme AUM (`aumCr`) or used in AUM rankings.
 - **All-Time High (ATH)**: The highest traded market price an equity or index has achieved throughout its entire historical existence on the exchange.
 - **Alpha (Jensen's Alpha)**: The risk-adjusted excess return generated by an active portfolio manager over and above the return expected under the Capital Asset Pricing Model (CAPM) given the scheme's systematic market risk (Beta).
 - **AMC (Asset Management Company)**: The SEBI-registered corporate management entity that oversees, operates, and administers mutual fund investment portfolios on behalf of unitholders.
@@ -1525,7 +1525,7 @@ MarketPulse never intentionally creates fake financial numbers.
 - **Annualized Volatility (σ_ann)**: The annualized statistical standard deviation of a mutual fund scheme's returns, computed from 36 monthly returns multiplied by the square root of 12 (√12).
 - **Arbitrage Fund**: A low-risk hybrid mutual fund that exploits simultaneous mispricings between cash and derivative equity futures markets without taking directional equity exposure.
 - **As-Of Date**: The exact cutoff valuation date to which a specific financial data point, quarterly earnings statement, portfolio holding list, or NAV strictly applies, distinct from the date it was fetched or ingested.
-- **AUM (Assets Under Management)**: The authoritative month-end total market value of financial assets managed by a mutual fund scheme. On MarketPulse, AUM strictly populates `aumCr` and determines all national, category, subcategory, and sector AUM rankings.
+- **AUM (Assets Under Management)**: The authoritative month-end total market value of financial assets managed by a mutual fund scheme. On The Lal Street, AUM strictly populates `aumCr` and determines all national, category, subcategory, and sector AUM rankings.
 - **Balanced Advantage Fund (BAF)**: An open-ended dynamic hybrid fund that dynamically rebalances its portfolio between equities and debt instruments based on proprietary valuation indicators.
 - **Benchmark**: A standard market index (e.g., Nifty 50 TRI, BSE 500 TRI) against which the relative performance and risk profile of a fund or stock are measured.
 - **Beta (β)**: A statistical regression coefficient measuring an asset's systematic risk and price sensitivity relative to broad market fluctuations (Nifty 50 TRI). When sufficient empirical data is unavailable, a neutral value of 1.0 may be used as a fallback.
@@ -1537,7 +1537,7 @@ MarketPulse never intentionally creates fake financial numbers.
 - **Cash Flow from Operations (CFO)**: Cash generated or consumed directly by a company's principal operating and commercial activities, excluding non-operating financing and investment flows.
 - **Contra Fund**: An active equity mutual fund that follows a contrarian investment philosophy, systematically purchasing out-of-favor, cyclical, or distressed companies trading below intrinsic value.
 - **Current Ratio**: Current assets divided by current liabilities; a core balance-sheet test evaluating short-term solvency and liquidity.
-- **DATA UNAVAILABLE Standard**: MarketPulse's institutional standard ensuring that whenever underlying regulatory, filing, or market data is absent, the UI displays `—` or *Data unavailable* rather than zero, fabricated estimates, or synthetic placeholders.
+- **DATA UNAVAILABLE Standard**: The Lal Street's institutional standard ensuring that whenever underlying regulatory, filing, or market data is absent, the UI displays `—` or *Data unavailable* rather than zero, fabricated estimates, or synthetic placeholders.
 - **Day Change (₹) & Day Change %**: The absolute rupee movement and percentage difference between the current Last Traded Price (LTP) and the preceding session's official exchange closing price.
 - **Debt-to-Equity Ratio (D/E)**: Total interest-bearing debt divided by total common equity, evaluating financial leverage and solvency risk.
 - **Diluted EPS**: Earnings Per Share calculated assuming the conversion and exercise of all outstanding stock options, warrants, and convertible debt into common shares.
@@ -1549,11 +1549,11 @@ MarketPulse never intentionally creates fake financial numbers.
 - **EBITDA**: Earnings Before Interest, Taxes, Depreciation, and Amortization; a non-GAAP measure of core operational cash generation before non-cash depreciation and capital structure costs.
 - **Eligible Universe Funds**: The total count of all active open-ended Direct-Growth mutual fund schemes in the five target categories (Large Cap, Mid Cap, Small Cap, Contra, Value) discovered from the authoritative AMFI scheme registry, serving as the official UI denominator (226 funds).
 - **ELSS (Equity Linked Savings Scheme)**: A diversified equity mutual fund offering tax deductions under Section 80C of the Indian Income Tax Act, subject to a statutory 3-year lock-in period.
-- **Em-Dash (—)**: The universal representation on MarketPulse for missing, unfiled, unverified, or mathematically non-computable metrics.
+- **Em-Dash (—)**: The universal representation on The Lal Street for missing, unfiled, unverified, or mathematically non-computable metrics.
 - **EPS (Earnings Per Share)**: Net profit attributable to common equity shareholders divided by the weighted average number of common shares outstanding.
 - **EV / EBITDA**: Enterprise Value (Market Cap + Net Debt) divided by EBITDA; an institutional valuation multiple that enables capital-structure-neutral corporate comparisons.
 - **Expense Ratio (TER - Total Expense Ratio)**: The annual recurring operational, management, and administrative fee deducted from a mutual fund's daily Net Asset Value, expressed as a percentage.
-- **FinAPI (Upvaly)**: The specialized financial market API service (`https://finapi.upvaly.com`) serving as MarketPulse's primary provider for mutual fund stock portfolios, constituent holdings, equity weights, and sector breakdowns.
+- **FinAPI (Upvaly)**: The specialized financial market API service (`https://finapi.upvaly.com`) serving as The Lal Street's primary provider for mutual fund stock portfolios, constituent holdings, equity weights, and sector breakdowns.
 - **Fiscal Year (FY)**: The Indian accounting and taxation year running from April 1 through March 31 of the subsequent calendar year.
 - **Flexi Cap Fund**: An open-ended equity mutual fund scheme with full statutory flexibility to allocate capital dynamically across Large Cap, Mid Cap, and Small Cap stocks without fixed percentage constraints.
 - **Fund Absolute Return %**: The point-to-point percentage gain in mutual fund Net Asset Value over holding periods shorter than one year (1M, 3M, 6M).
@@ -1561,7 +1561,7 @@ MarketPulse never intentionally creates fake financial numbers.
 - **Funds with Verified Holdings**: The count of eligible mutual fund schemes for which a latest verified statutory monthly portfolio disclosure was successfully retrieved, parsed, and indexed into the holdings database (211 funds, representing 93.36% coverage).
 - **Gilt Fund**: A debt mutual fund mandated to invest a minimum of 80% of total assets in sovereign debt securities issued by the Central and State Governments of India, carrying near-zero credit default risk.
 - **Growth Option**: A mutual fund plan option where generated dividends and capital gains remain reinvested within the scheme to compound unit NAV over time, rather than being distributed as cash.
-- **Holdings Coverage %**: The mathematical ratio of mutual fund schemes with verified parsed portfolio holdings divided by the total eligible fund universe, expressed as a percentage ([211 ÷ 226] × 100 = 93.36%). MarketPulse explicitly publishes this metric in diagnostics to maintain complete transparency.
+- **Holdings Coverage %**: The mathematical ratio of mutual fund schemes with verified parsed portfolio holdings divided by the total eligible fund universe, expressed as a percentage ([211 ÷ 226] × 100 = 93.36%). The Lal Street explicitly publishes this metric in diagnostics to maintain complete transparency.
 - **IDCW (Income Distribution cum Capital Withdrawal)**: The official SEBI designation (formerly known as the Dividend Option) for mutual fund plans that periodically distribute cash payouts to unitholders out of distributable surplus.
 - **India MF AUM Rank (`indiaMfRank`)**: The nationwide ordinal ranking (1 .. N) of an active Direct-Growth mutual fund scheme, sorted strictly descending by verified month-end scheme-level AUM.
 - **India Stock Rank (`indiaStockRank`)**: The comprehensive nationwide ranking (1 .. 12,536) of all listed Indian equities across NSE and BSE, ranked strictly descending by full market capitalization.
@@ -1576,7 +1576,7 @@ MarketPulse never intentionally creates fake financial numbers.
 - **Maximum Drawdown (MDD)**: The peak-to-trough percentage loss experienced by an asset or fund from its historical peak to its lowest subsequent trough before a new peak is reached.
 - **MF Star Allocation (★ Gold Star)**: An objective badge awarded to the top 3 mutual fund schemes by AUM within each peer subcategory that simultaneously qualify in the Top 10 by 5-Year CAGR and Top 10 by Since-Inception CAGR.
 - **Mid Cap**: Public companies ranked 101 through 250 in terms of full market capitalization on Indian stock exchanges.
-- **Minimum Acceptable Return (MAR)**: The baseline hurdle rate used in downside risk modeling, set in MarketPulse to the decompounded monthly yield of the RBI 91-Day Treasury Bill.
+- **Minimum Acceptable Return (MAR)**: The baseline hurdle rate used in downside risk modeling, set in The Lal Street to the decompounded monthly yield of the RBI 91-Day Treasury Bill.
 - **Monthly NAV Return (Ri)**: The discrete percentage change between consecutive official AMFI month-end Net Asset Values.
 - **Multi Asset Allocation Fund**: A hybrid mutual fund scheme mandated to maintain at least 10% allocation in each of a minimum of three distinct asset classes (e.g., Equity, Debt, and Gold/Commodities).
 - **Multi Cap Fund**: An equity mutual fund scheme mandated by SEBI to invest at least 25% each in Large Cap, Mid Cap, and Small Cap stocks at all times.
@@ -1584,7 +1584,7 @@ MarketPulse never intentionally creates fake financial numbers.
 - **Net Profit (PAT - Profit After Tax)**: The residual accounting profit remaining after subtracting all operational expenses, depreciation, interest charges, and income tax provisions from gross revenue.
 - **Net Profit Margin %**: Net profit after tax expressed as a percentage of operational revenue.
 - **Net Profit YoY %**: The same-quarter year-over-year percentage growth in net profit after tax, evaluated strictly against the corresponding fiscal quarter of the prior year.
-- **Nifty 50 / Nifty 50 TRI**: India's flagship 50-stock bluechip index maintained by NSE Indices. The Total Returns Index (TRI) accounts for both price movements and reinvested cash dividends and serves as MarketPulse's primary mutual fund performance benchmark.
+- **Nifty 50 / Nifty 50 TRI**: India's flagship 50-stock bluechip index maintained by NSE Indices. The Total Returns Index (TRI) accounts for both price movements and reinvested cash dividends and serves as The Lal Street's primary mutual fund performance benchmark.
 - **NSE (National Stock Exchange of India)**: India's largest and most liquid electronic financial securities exchange, located in Mumbai.
 - **Operating Margin %**: Operating profit (Reported EBIT) expressed as a percentage of revenue from operations, reflecting core pricing power and cost efficiency.
 - **P/B Ratio (Price-to-Book)**: The ratio of current share price to book value per share, comparing market valuation against accounting net equity.
@@ -1593,7 +1593,7 @@ MarketPulse never intentionally creates fake financial numbers.
 - **Regular Plan**: A mutual fund plan sold through intermediaries, brokers, and mutual fund distributors (MFDs) that includes ongoing trailing commission deductions from the scheme NAV.
 - **Revenue from Operations**: Top-line sales and operational turnover derived exclusively from a company's core commercial operations, excluding other non-operating income.
 - **Revenue YoY %**: The percentage change in top-line revenue from operations comparing a quarterly reporting period directly with the identical quarter from the previous fiscal year.
-- **Risk-Free Rate (Rf)**: The theoretical rate of return on an investment with zero credit risk, represented in MarketPulse by the sovereign cutoff yield of the RBI 91-Day Treasury Bill.
+- **Risk-Free Rate (Rf)**: The theoretical rate of return on an investment with zero credit risk, represented in The Lal Street by the sovereign cutoff yield of the RBI 91-Day Treasury Bill.
 - **ROCE (Return on Capital Employed)**: EBIT divided by total capital employed (Equity + Long-Term Debt), indicating capital efficiency.
 - **ROE (Return on Equity)**: Net profit after tax divided by average shareholder equity, measuring the return generated on shareholders' invested capital.
 - **Sector Allocation %**: The aggregate percentage weight of a mutual fund portfolio invested in companies belonging to a specific industry or economic sector.
@@ -1601,14 +1601,14 @@ MarketPulse never intentionally creates fake financial numbers.
 - **Small Cap**: Public companies ranked 251 and below in terms of full market capitalization on Indian stock exchanges.
 - **Sortino Ratio**: The annualized ratio of excess return over the minimum acceptable return (MAR) divided exclusively by downside deviation, evaluating returns per unit of harmful volatility.
 - **Stock Price Return %**: The percentage change in an equity's adjusted market price between the current quote and a historical lookback benchmark price.
-- **Stock Weightage Screener**: MarketPulse's institutional analytical screener that inverts traditional fund research to analyze the mutual fund universe from the stock's perspective, aggregating fund counts, average/min/max weightages, universe weightage %, and total rupee exposure across 829 canonical securities.
+- **Stock Weightage Screener**: The Lal Street's institutional analytical screener that inverts traditional fund research to analyze the mutual fund universe from the stock's perspective, aggregating fund counts, average/min/max weightages, universe weightage %, and total rupee exposure across 829 canonical securities.
 - **TTM (Trailing Twelve Months)**: Financial results aggregated across the four most recently completed consecutive fiscal quarters.
 - **Total AUM Exposure (₹ Cr)**: The aggregate rupee value of a specific equity held across all mutual fund schemes in the universe or selected category, identical to Total Holding Value (Σ HoldingMarketValue).
 - **Value Fund**: An active equity fund that adheres to a value investing strategy, buying undervalued stocks trading below their intrinsic liquidation or earnings potential.
 - **Volatility**: The statistical dispersion of asset price or NAV returns around their mean over a specified historical timeframe.
 - **Volume**: The total number of shares of an equity bought and sold on the exchange during a specific market session.
 - **YoY (Year-on-Year)**: A comparison of financial figures for a given reporting period against the exact equivalent period of the prior year (e.g., Q1 FY27 vs Q1 FY26).
-- **Zero-Fabrication Standard**: MarketPulse's fundamental data pledge: missing, unfiled, or non-computable data is presented strictly as `—` or *Data unavailable* and never replaced with artificial numbers, synthetic zeros, or imputed estimates.
+- **Zero-Fabrication Standard**: The Lal Street's fundamental data pledge: missing, unfiled, or non-computable data is presented strictly as `—` or *Data unavailable* and never replaced with artificial numbers, synthetic zeros, or imputed estimates.
 
 ---
 
@@ -1617,13 +1617,13 @@ MarketPulse never intentionally creates fake financial numbers.
 ### Institutional Notice & Terms of Use
 
 1. **Research & Educational Platform Only**:
-   MarketPulse is built solely as an analytical, educational, and information dashboard for market visualization. MarketPulse is **NOT** a registered investment adviser, broker-dealer, portfolio manager, or research analyst under the Securities and Exchange Board of India (SEBI) or any foreign regulatory authority.
+   The Lal Street is built solely as an analytical, educational, and information dashboard for market visualization. The Lal Street is **NOT** a registered investment adviser, broker-dealer, portfolio manager, or research analyst under the Securities and Exchange Board of India (SEBI) or any foreign regulatory authority.
 
 2. **No Investment Recommendations**:
-   Nothing on MarketPulse constitutes investment advice, financial planning, a stock tip, or a solicitation to buy, sell, or hold any security, derivative, mutual fund unit, or financial instrument.
+   Nothing on The Lal Street constitutes investment advice, financial planning, a stock tip, or a solicitation to buy, sell, or hold any security, derivative, mutual fund unit, or financial instrument.
 
 3. **Past Performance Warning**:
    Historical returns, CAGR figures, Sharpe ratios, and rankings are backward-looking historical calculations. **Past performance does not guarantee future financial results.**
 
 4. **Independent Verification Required**:
-   While MarketPulse strives for institutional accuracy and adheres to a strict Zero-Fabrication Standard, financial data is sourced from third-party market feeds, public filings, and regulatory disclosures that may contain delays, timing differences, or reporting revisions. Users must independently verify all critical financial data through official exchange announcements (NSE/BSE), company quarterly reports, and AMC scheme information documents before executing any financial transaction.
+   While The Lal Street strives for institutional accuracy and adheres to a strict Zero-Fabrication Standard, financial data is sourced from third-party market feeds, public filings, and regulatory disclosures that may contain delays, timing differences, or reporting revisions. Users must independently verify all critical financial data through official exchange announcements (NSE/BSE), company quarterly reports, and AMC scheme information documents before executing any financial transaction.

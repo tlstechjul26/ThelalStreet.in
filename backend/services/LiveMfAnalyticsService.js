@@ -325,14 +325,7 @@ class LiveMfAnalyticsService {
       ? riskAnalyticsService.calculateSinceInceptionSortinoRatio(monthlyReturns.slice(-60), effectiveRf) 
       : null;
 
-    const riskRatios = {
-      '1Y': { sharpe: sharpeRatio1Y, sortino: sortinoRatio1Y },
-      '3Y': { sharpe: sharpeRatio3Y, sortino: sortinoRatio3Y },
-      '5Y': { sharpe: sharpeRatio5Y, sortino: sortinoRatio5Y },
-      'All': { sharpe: sharpeRatio, sortino: sortinoRatio }
-    };
-
-    // Advanced Daily NAV Metrics (available for detail endpoints)
+    // Advanced Daily NAV Metrics (available for detail endpoints & fallback)
     const dailyReturns = [];
     const maxDays = Math.min(252, navData.length - 1);
     for (let i = 0; i < maxDays; i++) {
@@ -342,8 +335,20 @@ class LiveMfAnalyticsService {
         dailyReturns.push((navCurr - navPrev) / navPrev);
       }
     }
-    const sharpeRatioDaily = riskAnalyticsService.calculateDailySharpeRatio(dailyReturns, this.riskFreeRate);
-    const sortinoRatioDaily = riskAnalyticsService.calculateDailySortinoRatio(dailyReturns, this.riskFreeRate);
+    const sharpeRatioDaily = riskAnalyticsService.calculateDailySharpeRatio(dailyReturns, effectiveRf);
+    const sortinoRatioDaily = riskAnalyticsService.calculateDailySortinoRatio(dailyReturns, effectiveRf);
+
+    // Primary Metric Engine: 3-Year Trailing Sharpe and Sortino (industry standard)
+    // Falls back to Since Inception only if history is under 36 months
+    const primarySharpe = sharpeRatio3Y !== null ? sharpeRatio3Y : (sharpeRatio !== null ? sharpeRatio : (sharpeRatio1Y !== null ? sharpeRatio1Y : sharpeRatioDaily));
+    const primarySortino = sortinoRatio3Y !== null ? sortinoRatio3Y : (sortinoRatio !== null ? sortinoRatio : (sortinoRatio1Y !== null ? sortinoRatio1Y : sortinoRatioDaily));
+
+    const riskRatios = {
+      '1Y': { sharpe: sharpeRatio1Y ?? sharpeRatioDaily ?? primarySharpe, sortino: sortinoRatio1Y ?? sortinoRatioDaily ?? primarySortino },
+      '3Y': { sharpe: sharpeRatio3Y ?? primarySharpe, sortino: sortinoRatio3Y ?? primarySortino },
+      '5Y': { sharpe: sharpeRatio5Y ?? primarySharpe, sortino: sortinoRatio5Y ?? primarySortino },
+      'All': { sharpe: sharpeRatio ?? sharpeRatioDaily ?? primarySharpe, sortino: sortinoRatio ?? sortinoRatioDaily ?? primarySortino }
+    };
 
     const returns = {
       '1D': return1D,
@@ -356,11 +361,6 @@ class LiveMfAnalyticsService {
       '5Y': return5Y,
       'All': returnAll
     };
-
-    // Primary Metric Engine: 3-Year Trailing Sharpe and Sortino (industry standard)
-    // Falls back to Since Inception only if history is under 36 months
-    const primarySharpe = sharpeRatio3Y !== null ? sharpeRatio3Y : sharpeRatio;
-    const primarySortino = sortinoRatio3Y !== null ? sortinoRatio3Y : sortinoRatio;
 
     return { 
       return1D, return1W, return1M, return3M, return6M, return1Y, return3Y, return5Y, returnAll,

@@ -37,7 +37,20 @@ const SYMBOL_ALIASES = {
   'M&M': 'M&M.NS',
   'BAJAJ-AUTO': 'BAJAJ-AUTO.NS',
   'BAJAJAUTO': 'BAJAJ-AUTO.NS',
-  'M&MFIN': 'M&MFIN.NS'
+  'M&MFIN': 'M&MFIN.NS',
+  'SENSEX': '^BSESN',
+  'BSESN': '^BSESN',
+  'NIFTY 50': '^NSEI',
+  'NIFTY50': '^NSEI',
+  'NIFTY': '^NSEI',
+  'BANK NIFTY': '^NSEBANK',
+  'BANKNIFTY': '^NSEBANK',
+  'NIFTY BANK': '^NSEBANK',
+  'NIFTY 500': '^CRSLDX',
+  'NIFTY500': '^CRSLDX',
+  'S&P 500': '^GSPC',
+  'INDIA VIX': '^INDIAVIX',
+  'INDIAVIX': '^INDIAVIX'
 };
 
 class YahooFinanceService {
@@ -46,7 +59,7 @@ class YahooFinanceService {
       'RELIANCE.NS', 'TCS.NS', 'INFY.NS', 'HDFCBANK.NS', 'ICICIBANK.NS', 
       'SBIN.NS', 'TMPV.NS', 'TMCV.NS', 'ITC.NS', 'SUNPHARMA.NS', 'TATASTEEL.NS', 
       'DLF.NS', 'AAPL', 'MSFT', 'TSLA', 'NVDA',
-      '^NSEI', '^CNX100', '^NSMIDCP', '^NSEMDCP50', '^CNXSC', '^CRSLDX'
+      '^NSEI', '^BSESN', '^NSEBANK', '^CNX100', '^NSMIDCP', '^NSEMDCP50', '^CNXSC', '^CRSLDX'
     ];
 
     // Short-lived quote cache (3 minutes freshness window)
@@ -144,23 +157,64 @@ class YahooFinanceService {
         const now = new Date();
         const p5yDate = new Date(now.getFullYear() - 5, now.getMonth() - 2, now.getDate());
         const session = getIndianMarketSession();
+        const isIndianSecurity = yahooSym.endsWith('.NS') || yahooSym.endsWith('.BO') || !KNOWN_GLOBAL_SYMBOLS.has(yahooSym);
+        const indianEpoch = new Date('2000-01-01T00:00:00Z');
+        const mPeriod1 = isIndianSecurity ? Math.floor(indianEpoch.getTime() / 1000) : 0;
 
-        // Single shared fetch for both daily (5Y) and monthly (lifetime) with bounded 3s timeout
+        // Single shared fetch for both daily (5Y) and monthly (lifetime) with bounded 8s timeout
         const [dailyChart, monthlyChart] = await Promise.all([
           withTimeout(
             yahooFinance.chart(yahooSym, { period1: p5yDate, period2: now, interval: '1d' }).catch(() => ({ quotes: [] })),
-            3000,
+            8000,
             { quotes: [] }
           ),
           withTimeout(
-            yahooFinance.chart(yahooSym, { period1: 0, period2: now, interval: '1mo' }).catch(() => ({ quotes: [] })),
-            3000,
+            yahooFinance.chart(yahooSym, { period1: mPeriod1, period2: now, interval: '1mo' }).catch(() => ({ quotes: [] })),
+            8000,
             { quotes: [] }
           )
         ]);
 
-        const dQuotes = (dailyChart?.quotes || []).filter(q => typeof q.close === 'number' && !isNaN(q.close) && q.close > 0);
-        const mQuotes = (monthlyChart?.quotes || []).filter(q => typeof q.close === 'number' && !isNaN(q.close) && q.close > 0);
+        const getPriceClose = (q) => {
+          if (!q) return null;
+          // In Yahoo Finance chart quotes, 'close' is already split-adjusted and bonus-adjusted.
+          // Standard broker platforms (Tickertape, Zerodha, Google Finance, Screener) track
+          // split-adjusted capital price returns using 'close', rather than cash-dividend-deflated 'adjclose'.
+          if (typeof q.close === 'number' && !isNaN(q.close) && isFinite(q.close) && q.close > 0) {
+            return q.close;
+          }
+          if (typeof q.adjclose === 'number' && !isNaN(q.adjclose) && isFinite(q.adjclose) && q.adjclose > 0) {
+            return q.adjclose;
+          }
+          return null;
+        };
+
+        const processQuotes = (rawQuotes = []) => {
+          const map = new Map();
+          for (const q of rawQuotes) {
+            if (!q || !q.date) continue;
+            const d = new Date(q.date);
+            if (isNaN(d.getTime())) continue;
+            if (isIndianSecurity && d.getTime() < indianEpoch.getTime()) continue;
+            const price = getPriceClose(q);
+            if (price === null || price <= 0) continue;
+            const dStr = d.toISOString().split('T')[0];
+            map.set(dStr, {
+              ...q,
+              date: d,
+              dateStr: dStr,
+              adjclose: (typeof q.adjclose === 'number' && q.adjclose > 0) ? q.adjclose : price,
+              close: price,
+              volume: (typeof q.volume === 'number' && !isNaN(q.volume) && q.volume >= 0) ? q.volume : 0
+            });
+          }
+          const list = Array.from(map.values());
+          list.sort((a, b) => a.date.getTime() - b.date.getTime());
+          return list;
+        };
+
+        const dQuotes = processQuotes(dailyChart?.quotes || []);
+        const mQuotes = processQuotes(monthlyChart?.quotes || []);
 
         if (dQuotes.length === 0 && mQuotes.length === 0) {
           const emptyResult = {
@@ -171,35 +225,26 @@ class YahooFinanceService {
         }
 
         const latestCandle = dQuotes[dQuotes.length - 1] || mQuotes[mQuotes.length - 1];
-        const latestPrice = (typeof currentPrice === 'number' && currentPrice > 0) ? currentPrice : latestCandle.close;
-        const latestPriceDate = new Date(latestCandle.date).toISOString().split('T')[0];
+        
+        // Consistent split-adjusted latest price
+        let latestPrice = null;
+        if (typeof currentPrice === 'number' && currentPrice > 0 && isFinite(currentPrice)) {
+          latestPrice = currentPrice;
+        } else {
+          latestPrice = latestCandle?.close || null;
+        }
+        const latest_adjusted_close = latestPrice;
 
         // 1. Calculate Multi-period Returns
         const findQuoteOnOrBefore = (targetDate, maxDaysOffset = 30) => {
           const targetTime = targetDate.getTime();
           // First attempt lookup in high-resolution daily candles
           if (dQuotes && dQuotes.length > 0) {
-            const earliestTime = new Date(dQuotes[0].date).getTime();
+            const earliestTime = dQuotes[0].date.getTime();
             if (targetTime >= earliestTime) {
               let best = null;
               for (const q of dQuotes) {
-                const t = new Date(q.date).getTime();
-                if (t <= targetTime) {
-                  best = q;
-                } else {
-                  break;
-                }
-              }
-              if (best) return { date: new Date(best.date).toISOString().split('T')[0], price: best.close };
-            }
-          }
-          // Fall back to authentic monthly candles if targetDate precedes daily history
-          if (mQuotes && mQuotes.length > 0) {
-            const earliestMonthlyTime = new Date(mQuotes[0].date).getTime();
-            if (targetTime >= earliestMonthlyTime) {
-              let best = null;
-              for (const q of mQuotes) {
-                const t = new Date(q.date).getTime();
+                const t = q.date.getTime();
                 if (t <= targetTime) {
                   best = q;
                 } else {
@@ -207,10 +252,29 @@ class YahooFinanceService {
                 }
               }
               if (best) {
-                const candleTime = new Date(best.date).getTime();
-                const diffDays = Math.abs(targetTime - candleTime) / (1000 * 60 * 60 * 24);
+                const p = best.close || getPriceClose(best);
+                if (p && p > 0) return { date: best.dateStr, price: p };
+              }
+            }
+          }
+          // Fall back to authentic monthly candles if targetDate precedes daily history
+          if (mQuotes && mQuotes.length > 0) {
+            const earliestMonthlyTime = mQuotes[0].date.getTime();
+            if (targetTime >= earliestMonthlyTime) {
+              let best = null;
+              for (const q of mQuotes) {
+                const t = q.date.getTime();
+                if (t <= targetTime) {
+                  best = q;
+                } else {
+                  break;
+                }
+              }
+              if (best) {
+                const diffDays = Math.abs(targetTime - best.date.getTime()) / (1000 * 60 * 60 * 24);
                 if (diffDays <= maxDaysOffset) {
-                  return { date: new Date(best.date).toISOString().split('T')[0], price: best.close };
+                  const p = best.close || getPriceClose(best);
+                  if (p && p > 0) return { date: best.dateStr, price: p };
                 }
               }
             }
@@ -225,27 +289,30 @@ class YahooFinanceService {
         const d3y = new Date(now.getFullYear() - 3, now.getMonth(), now.getDate());
         const d5y = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate());
 
-        const p1w = findQuoteOnOrBefore(d1w, 4);
+        const p1w = findQuoteOnOrBefore(d1w, 5);
         const p1m = findQuoteOnOrBefore(d1m, 20);
         const p6m = findQuoteOnOrBefore(d6m, 45);
         const p1y = findQuoteOnOrBefore(d1y, 60);
         const p3y = findQuoteOnOrBefore(d3y, 90);
         const p5y = findQuoteOnOrBefore(d5y, 90);
 
+        // Find earliest valid session for ALL-time return
         let pAll = null;
-        if (mQuotes.length >= 2) {
-          const earliestM = mQuotes[0];
-          if (earliestM && typeof earliestM.close === 'number' && earliestM.close > 0.0001) {
-            pAll = { date: new Date(earliestM.date).toISOString().split('T')[0], price: earliestM.close };
+        if (mQuotes.length > 0) {
+          const validCandidates = mQuotes.filter(q => (q.volume > 0 || mQuotes.length < 5) && q.close > 0.0001);
+          const earliestCandidate = validCandidates.length > 0 ? validCandidates[0] : mQuotes[0];
+          const earliestPrice = earliestCandidate.close || getPriceClose(earliestCandidate);
+          if (typeof earliestPrice === 'number' && earliestPrice > 0.0001) {
+            pAll = { date: earliestCandidate.dateStr, price: earliestPrice };
           }
         }
 
+        // Return formula: ((latest_adjusted_close / earliest_valid_adjusted_close) - 1) * 100
         const calcReturn = (baseline) => {
-          if (!baseline || typeof baseline.price !== 'number' || baseline.price <= 0 || !latestPrice || latestPrice <= 0) {
+          if (!baseline || typeof baseline.price !== 'number' || isNaN(baseline.price) || baseline.price <= 0 || !latest_adjusted_close || latest_adjusted_close <= 0) {
             return null;
           }
-          // Exact formula: ((currentPrice / baselinePrice) - 1) * 100
-          return parseFloat((((latestPrice - baseline.price) / baseline.price) * 100).toFixed(2));
+          return parseFloat((((latest_adjusted_close / baseline.price) - 1) * 100).toFixed(2));
         };
 
         const returns = {
@@ -782,15 +849,39 @@ class YahooFinanceService {
                 let ebit = (typeof fin?.ebit === 'number') ? fin.ebit : null;
 
                 const ltp = price;
-                const previousClose = typeof q.regularMarketPreviousClose === 'number' ? q.regularMarketPreviousClose : ltp;
-                const change = parseFloat((ltp - previousClose).toFixed(4));
-                const changePercent = previousClose > 0 ? parseFloat((((ltp - previousClose) / previousClose) * 100).toFixed(4)) : 0;
+                const change = typeof q.regularMarketChange === 'number' && !isNaN(q.regularMarketChange)
+                  ? parseFloat(q.regularMarketChange.toFixed(4))
+                  : parseFloat((ltp - (typeof q.regularMarketPreviousClose === 'number' ? q.regularMarketPreviousClose : ltp)).toFixed(4));
+                const changePercent = typeof q.regularMarketChangePercent === 'number' && !isNaN(q.regularMarketChangePercent)
+                  ? parseFloat(q.regularMarketChangePercent.toFixed(4))
+                  : (typeof q.regularMarketPreviousClose === 'number' && q.regularMarketPreviousClose > 0 
+                      ? parseFloat((((ltp - q.regularMarketPreviousClose) / q.regularMarketPreviousClose) * 100).toFixed(4)) 
+                      : 0);
+                const previousClose = typeof q.regularMarketPreviousClose === 'number' ? q.regularMarketPreviousClose : (ltp - change);
 
                 const isGlobal = KNOWN_GLOBAL_SYMBOLS.has(sym) || (!sym.endsWith('.NS') && !sym.endsWith('.BO') && !sym.startsWith('^'));
                 const symSession = isGlobal ? getUSMarketSession() : getIndianMarketSession();
 
-                const isSessionLive = symSession.isOpen && q.regularMarketTime && (Date.now() - new Date(q.regularMarketTime).getTime() < 30 * 60 * 1000);
+                let regularMarketDateStr = null;
+                if (q.regularMarketTime) {
+                  if (q.regularMarketTime instanceof Date && !isNaN(q.regularMarketTime.getTime())) {
+                    regularMarketDateStr = q.regularMarketTime.toISOString();
+                  } else if (typeof q.regularMarketTime === 'number' && !isNaN(q.regularMarketTime)) {
+                    const ms = q.regularMarketTime < 1e11 ? q.regularMarketTime * 1000 : q.regularMarketTime;
+                    regularMarketDateStr = new Date(ms).toISOString();
+                  }
+                }
+
+                const priceAgeMs = regularMarketDateStr ? (Date.now() - new Date(regularMarketDateStr).getTime()) : Infinity;
+                const isSessionLive = symSession.isOpen && priceAgeMs < (20 * 60 * 1000);
                 const fetchedAt = new Date().toISOString();
+
+                let resolvedPriceAsOf = regularMarketDateStr;
+                if (!resolvedPriceAsOf) {
+                  resolvedPriceAsOf = (!symSession.isOpen && symSession.istDateStr)
+                    ? `${symSession.istDateStr}T15:30:00+05:30`
+                    : fetchedAt;
+                }
 
                 const quoteObj = {
                   symbol: sym,
@@ -825,10 +916,10 @@ class YahooFinanceService {
                   source: "YAHOO_FINANCE",
                   sourceType: "YAHOO_QUOTE",
                   isLive: isSessionLive,
-                  priceAsOf: q.regularMarketTime ? new Date(q.regularMarketTime).toISOString() : fetchedAt,
+                  priceAsOf: resolvedPriceAsOf,
                   fetchedAt,
                   lastUpdatedAt: fetchedAt,
-                  dataStatus: symSession.isOpen ? "LIVE" : "EOD"
+                  dataStatus: symSession.isOpen ? (isSessionLive ? "LIVE" : "DELAYED") : "EOD"
                 };
 
                 const validated = validateAndSanitizeQuote(quoteObj);
@@ -917,8 +1008,8 @@ class YahooFinanceService {
       }
 
       const [fin, analysis] = await Promise.all([
-        this.getStockFinancials(yahooSym),
-        this.getHistoricalAnalysis(yahooSym, baseQuote?.ltp)
+        this.getStockFinancials(yahooSym).catch(() => ({ ebit: null, netProfit: null })),
+        this.getHistoricalAnalysis(yahooSym, baseQuote?.ltp).catch(() => ({ returns: null, athBase: null }))
       ]);
 
       const ltp = baseQuote?.ltp || null;
@@ -972,35 +1063,94 @@ class YahooFinanceService {
     try {
       const { resolveRangeToDates } = await import('../utils/dateRangeUtils.js');
       const parsedRange = resolveRangeToDates(interval);
-      const period1 = parsedRange.start;
+      let period1 = parsedRange.start;
 
-      const res = await withTimeout(
+      const cleanInterval = String(interval || '').toLowerCase();
+      if (cleanInterval === '1d') {
+        const d = new Date();
+        d.setDate(d.getDate() - 2);
+        period1 = d;
+      }
+
+      // Standardize Indian equity inception to modern electronic demat trading standard (2000-01-01)
+      const isIndianSecurity = yahooSym.endsWith('.NS') || yahooSym.endsWith('.BO') || !KNOWN_GLOBAL_SYMBOLS.has(yahooSym);
+      const indianEpoch = new Date('2000-01-01T00:00:00Z');
+      if (isIndianSecurity && period1.getTime() < indianEpoch.getTime()) {
+        period1 = indianEpoch;
+      }
+
+      const candleInterval = cleanInterval === '1d' ? '5m' : (cleanInterval === '1w' ? '15m' : '1d');
+
+      let res = await withTimeout(
         yahooFinance.chart(yahooSym, {
           period1: Math.floor(period1.getTime() / 1000),
           period2: Math.floor(Date.now() / 1000),
-          interval: '1d'
+          interval: candleInterval
         }),
         10000,
         null
       );
 
+      if ((!res || !res.quotes || res.quotes.length === 0) && candleInterval !== '1d') {
+        const fallbackRange = resolveRangeToDates(interval);
+        let fallbackStart = fallbackRange.start;
+        if (isIndianSecurity && fallbackStart.getTime() < indianEpoch.getTime()) {
+          fallbackStart = indianEpoch;
+        }
+        res = await withTimeout(
+          yahooFinance.chart(yahooSym, {
+            period1: Math.floor(fallbackStart.getTime() / 1000),
+            period2: Math.floor(Date.now() / 1000),
+            interval: '1d'
+          }),
+          10000,
+          null
+        );
+      }
+
       if (!res || !res.quotes || res.quotes.length === 0) {
         return { available: false, reason: 'No historical candle data', data: [] };
       }
 
+      const indianEpochTime = indianEpoch.getTime();
       const data = res.quotes
-        .filter(candle => candle.close !== null && candle.close !== undefined)
-        .map(candle => ({
-          time: new Date(candle.date).getTime(),
-          open: candle.open,
-          high: candle.high,
-          low: candle.low,
-          close: candle.close,
-          volume: candle.volume || 0
-        }))
+        .filter(candle => {
+          const c = candle.close ?? candle.adjclose;
+          if (c === null || c === undefined || isNaN(c) || c <= 0) return false;
+          if (isIndianSecurity) {
+            const cTime = new Date(candle.date).getTime();
+            if (cTime < indianEpochTime) return false;
+          }
+          return true;
+        })
+        .map(candle => {
+          const close = Number(candle.close ?? candle.adjclose);
+          const rawOpen = candle.open !== null && candle.open !== undefined ? Number(candle.open) : close;
+          const rawHigh = candle.high !== null && candle.high !== undefined ? Number(candle.high) : Math.max(close, rawOpen);
+          const rawLow = candle.low !== null && candle.low !== undefined ? Number(candle.low) : Math.min(close, rawOpen);
+          return {
+            time: new Date(candle.date).getTime(),
+            open: rawOpen,
+            high: Math.max(rawHigh, rawOpen, close),
+            low: Math.min(rawLow, rawOpen, close),
+            close: close,
+            volume: typeof candle.volume === 'number' && !isNaN(candle.volume) ? candle.volume : 0
+          };
+        })
         .sort((a, b) => a.time - b.time);
 
-      return { available: true, data };
+      const prevClose = res?.meta?.previousClose ?? res?.meta?.chartPreviousClose ?? null;
+      if (data.length > 0 && prevClose !== null) {
+        data[0].previousClose = prevClose;
+      }
+
+      return { 
+        available: true, 
+        data, 
+        previousClose: prevClose, 
+        regularMarketPrice: res?.meta?.regularMarketPrice ?? null,
+        meta: res?.meta 
+      };
     } catch (err) {
       console.error(`Yahoo Finance chart error for ${yahooSym}:`, err.message);
       return { available: false, reason: err.message, data: [] };

@@ -332,8 +332,8 @@ async function formatAllDirectSchemes() {
       }
     }
 
-    const primarySharpe = (s.sharpeRatio3Y !== undefined && s.sharpeRatio3Y !== null) ? s.sharpeRatio3Y : (s.sharpeRatio ?? null);
-    const primarySortino = (s.sortinoRatio3Y !== undefined && s.sortinoRatio3Y !== null) ? s.sortinoRatio3Y : (s.sortinoRatio ?? null);
+    const primarySharpe = s.sharpeRatio ?? (s.sharpeRatio3Y !== undefined && s.sharpeRatio3Y !== null ? s.sharpeRatio3Y : (s.riskRatios?.['3Y']?.sharpe ?? s.riskRatios?.['All']?.sharpe ?? s.riskRatios?.['1Y']?.sharpe ?? null));
+    const primarySortino = s.sortinoRatio ?? (s.sortinoRatio3Y !== undefined && s.sortinoRatio3Y !== null ? s.sortinoRatio3Y : (s.riskRatios?.['3Y']?.sortino ?? s.riskRatios?.['All']?.sortino ?? s.riskRatios?.['1Y']?.sortino ?? null));
 
     return {
       id: String(s.schemeCode),
@@ -403,9 +403,23 @@ async function formatAllDirectSchemes() {
       sortinoRatio3Y: s.sortinoRatio3Y ?? primarySortino,
       sharpeRatioInception: s.sharpeRatioInception ?? s.sharpeRatio ?? null,
       sortinoRatioInception: s.sortinoRatioInception ?? s.sortinoRatio ?? null,
-      riskRatios: s.riskRatios || {
-        '3Y': { sharpe: primarySharpe, sortino: primarySortino },
-        'All': { sharpe: s.sharpeRatioInception ?? s.sharpeRatio ?? null, sortino: s.sortinoRatioInception ?? s.sortinoRatio ?? null }
+      riskRatios: {
+        '1Y': {
+          sharpe: s.riskRatios?.['1Y']?.sharpe ?? primarySharpe,
+          sortino: s.riskRatios?.['1Y']?.sortino ?? primarySortino
+        },
+        '3Y': {
+          sharpe: s.riskRatios?.['3Y']?.sharpe ?? s.sharpeRatio3Y ?? primarySharpe,
+          sortino: s.riskRatios?.['3Y']?.sortino ?? s.sortinoRatio3Y ?? primarySortino
+        },
+        '5Y': {
+          sharpe: s.riskRatios?.['5Y']?.sharpe ?? s.sharpeRatio5Y ?? primarySharpe,
+          sortino: s.riskRatios?.['5Y']?.sortino ?? s.sortinoRatio5Y ?? primarySortino
+        },
+        'All': {
+          sharpe: s.riskRatios?.['All']?.sharpe ?? s.sharpeRatioInception ?? primarySharpe,
+          sortino: s.riskRatios?.['All']?.sortino ?? s.sortinoRatioInception ?? primarySortino
+        }
       },
       launchDate: s.launchDate ?? null,
       launchYear: launchYearVal,

@@ -68,7 +68,39 @@ class MfDataAggregatorService {
     }
   }
 
-  async getSchemeNavHistory(schemeCode, range = '1y') {
+  async resolveToSchemeCode(codeOrId) {
+    if (!codeOrId) return null;
+    const str = String(codeOrId).trim();
+    if (/^\d+$/.test(str)) return str;
+
+    // 1. Try AMFI active schemes lookup by ISIN or exact match
+    try {
+      const amfiImportService = (await import('./AmfiImportService.js')).default;
+      const activeList = await amfiImportService.getActiveSchemes();
+      if (activeList && activeList.length > 0) {
+        const found = activeList.find(s => 
+          String(s.schemeCode) === str ||
+          s.isinGrowth === str ||
+          s.isin === str ||
+          (s.schemeName && s.schemeName.toLowerCase() === str.toLowerCase())
+        );
+        if (found && found.schemeCode) return String(found.schemeCode);
+      }
+    } catch (_) {}
+
+    // 2. Try mfapi search if it's an ISIN or text
+    try {
+      const searchRes = await this.searchSchemes(str);
+      if (searchRes && searchRes.length > 0) {
+        return String(searchRes[0].schemeCode);
+      }
+    } catch (_) {}
+
+    return str;
+  }
+
+  async getSchemeNavHistory(rawSchemeCode, range = '1y') {
+    const schemeCode = await this.resolveToSchemeCode(rawSchemeCode);
     const cacheKey = `nav_${schemeCode}_${stringifyRange(range)}`;
     const cached = this._getCached(cacheKey);
     if (cached) return cached;
@@ -97,7 +129,8 @@ class MfDataAggregatorService {
     return result;
   }
 
-  async getSchemeHoldings(schemeCode, timeframe = 'all') {
+  async getSchemeHoldings(rawSchemeCode, timeframe = 'all') {
+    const schemeCode = await this.resolveToSchemeCode(rawSchemeCode);
     const cleanCode = String(schemeCode || '').trim();
     const cacheKey = `holdings_${cleanCode}_${timeframe}_dynamic`;
     const cached = this._getCached(cacheKey);
@@ -331,14 +364,26 @@ class MfDataAggregatorService {
 
   _filterByRange(data, range) {
     if (data.length === 0) return [];
+    const r = typeof range === 'string' ? range.toLowerCase() : '';
     const parsedRange = resolveRangeToDates(range);
     
     const startTime = parsedRange.start.getTime();
     const endTime = parsedRange.end.getTime();
-    const filtered = data.filter(d => d.time >= startTime && d.time <= endTime);
+    let filtered = data.filter(d => d.time >= startTime && d.time <= endTime);
     
+    if (r === '1d' && filtered.length < 2 && data.length >= 2) {
+      return data.slice(-2);
+    }
+    if (r === '1w' && filtered.length < 2 && data.length >= 2) {
+      return data.slice(-7);
+    }
     if (filtered.length === 0 && data.length > 0) {
-      return data;
+      if (r === '1d') return data.slice(-2);
+      if (r === '1w') return data.slice(-7);
+      if (r === '1m' || r === '1mo') return data.slice(-30);
+      if (r === '3m' || r === '3mo') return data.slice(-65);
+      if (r === '6m' || r === '6mo') return data.slice(-130);
+      return data.slice(-250);
     }
     
     return filtered;

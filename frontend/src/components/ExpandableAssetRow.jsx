@@ -23,6 +23,7 @@ export default function ExpandableAssetRow({ asset, region = 'all', onToggle, sh
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef(null);
+  const baselineRef = useRef(null);
 
   // Format currency properly
   const formatPrice = (val, currency) => {
@@ -97,10 +98,11 @@ export default function ExpandableAssetRow({ asset, region = 'all', onToggle, sh
         layout: {
           background: { color: 'transparent' },
           textColor: '#94a3b8',
+          attributionLogo: false,
         },
         grid: {
-          vertLines: { color: '#1e293b' },
-          horzLines: { color: '#1e293b' },
+          vertLines: { visible: false },
+          horzLines: { color: 'rgba(148, 163, 184, 0.08)' },
         },
         timeScale: {
           timeVisible: true,
@@ -123,6 +125,18 @@ export default function ExpandableAssetRow({ asset, region = 'all', onToggle, sh
       chartRef.current.observer = resizeObserver;
     }
 
+    if (uniqueData.length > 1 && uniqueData[0].value > 0) {
+      const baseline = chartRef.current.addLineSeries({
+        color: 'rgba(148, 163, 184, 0.35)',
+        lineWidth: 1,
+        lineStyle: 1,
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+      });
+      baseline.setData(uniqueData.map(c => ({ time: c.time, value: uniqueData[0].value })));
+      baselineRef.current = baseline;
+    }
     if (seriesRef.current) {
       chartRef.current.removeSeries(seriesRef.current);
     }
@@ -130,9 +144,9 @@ export default function ExpandableAssetRow({ asset, region = 'all', onToggle, sh
     if (!chartRef.current) return; // safeguard
 
     const newSeries = chartRef.current.addAreaSeries({
-      lineColor: '#6366f1',
-      topColor: 'rgba(99, 102, 241, 0.4)',
-      bottomColor: 'rgba(99, 102, 241, 0.0)',
+      lineColor: isUp ? '#00b386' : '#eb5b3c',
+      topColor: isUp ? 'rgba(0, 179, 134, 0.25)' : 'rgba(235, 91, 60, 0.25)',
+      bottomColor: isUp ? 'rgba(0, 179, 134, 0.0)' : 'rgba(235, 91, 60, 0.0)',
       lineWidth: 2,
     });
     seriesRef.current = newSeries;
@@ -153,6 +167,18 @@ export default function ExpandableAssetRow({ asset, region = 'all', onToggle, sh
     // Filter duplicates
     const uniqueData = formattedData.filter((c, i, arr) => i === 0 || c.time > arr[i - 1].time);
 
+    if (uniqueData.length > 1 && uniqueData[0].value > 0) {
+      const baseline = chartRef.current.addLineSeries({
+        color: 'rgba(148, 163, 184, 0.35)',
+        lineWidth: 1,
+        lineStyle: 1,
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+      });
+      baseline.setData(uniqueData.map(c => ({ time: c.time, value: uniqueData[0].value })));
+      baselineRef.current = baseline;
+    }
     if (seriesRef.current) {
       seriesRef.current.setData(uniqueData);
     }
@@ -225,7 +251,7 @@ export default function ExpandableAssetRow({ asset, region = 'all', onToggle, sh
             <div className="text-xs text-[var(--text-muted)] font-mono flex items-center gap-2">
               <span>(Scheme Code: {asset.id})</span>
               {(asset.launchYear || asset.inceptionYear) && (
-                <span className="text-amber-500 font-semibold">• Launched {asset.launchYear || asset.inceptionYear}</span>
+                <span className="text-slate-400 font-semibold">• Launched {asset.launchYear || asset.inceptionYear}</span>
               )}
               {(asset.navAsOfDate || asset.navDate || asset.asOfDate) && (
                 <span className="text-[11px] opacity-80">• As of {asset.navAsOfDate || asset.navDate || asset.asOfDate}</span>
@@ -246,11 +272,11 @@ export default function ExpandableAssetRow({ asset, region = 'all', onToggle, sh
                   <>
                     <div className="text-right">
                       <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-semibold mb-0.5">Sharpe (1Y)</div>
-                      <MiniRatioIndicator value={asset.sharpeRatio} type="sharpe" />
+                      <MiniRatioIndicator value={asset.sharpeRatio ?? asset.sharpeRatio3Y ?? asset.riskRatios?.['1Y']?.sharpe ?? asset.riskRatios?.['3Y']?.sharpe ?? detail?.sharpeRatio} type="sharpe" />
                     </div>
                     <div className="text-right">
                       <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-semibold mb-0.5">Sortino (1Y)</div>
-                      <MiniRatioIndicator value={asset.sortinoRatio} type="sortino" />
+                      <MiniRatioIndicator value={asset.sortinoRatio ?? asset.sortinoRatio3Y ?? asset.riskRatios?.['1Y']?.sortino ?? asset.riskRatios?.['3Y']?.sortino ?? detail?.sortinoRatio} type="sortino" />
                     </div>
                   </>
                 )}
@@ -315,6 +341,7 @@ export default function ExpandableAssetRow({ asset, region = 'all', onToggle, sh
                       activeRange={chartRange}
                       onChange={setChartRange}
                       earliestDate={null}
+                      assetType={asset?.type}
                     />
                   </div>
                   {(!detail.history || detail.history.length === 0) ? (
@@ -350,9 +377,9 @@ export default function ExpandableAssetRow({ asset, region = 'all', onToggle, sh
                     <div className="text-[10px] text-[var(--text-muted)] uppercase font-semibold tracking-wider mb-1">Sharpe (1Y) / Sortino (1Y)</div>
                     {asset.type === 'mf' ? (
                       <div className="flex items-center justify-center gap-2 mt-0.5">
-                        <MiniRatioIndicator value={asset.sharpeRatio || Number(detail?.advancedAnalysis?.performance?.sharpeRatio)} type="sharpe" />
+                        <MiniRatioIndicator value={detail?.sharpeRatio ?? asset.sharpeRatio ?? detail?.riskRatios?.['1Y']?.sharpe ?? detail?.riskRatios?.['3Y']?.sharpe ?? asset.riskRatios?.['1Y']?.sharpe ?? asset.riskRatios?.['3Y']?.sharpe ?? Number(detail?.advancedAnalysis?.performance?.sharpeRatio)} type="sharpe" />
                         <span className="text-[var(--text-muted)] font-bold text-xs">/</span>
-                        <MiniRatioIndicator value={asset.sortinoRatio || Number(detail?.advancedAnalysis?.performance?.sortinoRatio)} type="sortino" />
+                        <MiniRatioIndicator value={detail?.sortinoRatio ?? asset.sortinoRatio ?? detail?.riskRatios?.['1Y']?.sortino ?? detail?.riskRatios?.['3Y']?.sortino ?? asset.riskRatios?.['1Y']?.sortino ?? asset.riskRatios?.['3Y']?.sortino ?? Number(detail?.advancedAnalysis?.performance?.sortinoRatio)} type="sortino" />
                       </div>
                     ) : (
                       <div className="text-sm font-bold text-[var(--text-primary)]">{detail?.sharpeRatio || '—'}</div>

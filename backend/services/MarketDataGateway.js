@@ -38,8 +38,24 @@ class MarketDataGateway {
       }
     }
 
+    const session = getIndianMarketSession();
+
     if (uncached.length === 0) {
-      const cachedQuotes = uniqueSymbols.map(sym => cachedMap.get(sym)).filter(Boolean);
+      const cachedQuotes = uniqueSymbols.map(sym => {
+        const q = cachedMap.get(sym);
+        if (!q) return null;
+        if (q.dataStatus === "UNAVAILABLE" || q.price === null) return q;
+        if (!session.isOpen) {
+          return { ...q, isLive: false, dataStatus: q.dataStatus && q.dataStatus !== 'LIVE' ? q.dataStatus : 'EOD' };
+        }
+        // Never label cached data as live
+        const priceAgeMinutes = q.priceAsOf ? (Date.now() - new Date(q.priceAsOf).getTime()) / (1000 * 60) : 0;
+        return {
+          ...q,
+          isLive: false,
+          dataStatus: priceAgeMinutes > 20 ? 'STALE' : 'DELAYED'
+        };
+      }).filter(Boolean);
       return {
         available: cachedQuotes.some(q => q.dataStatus !== "UNAVAILABLE"),
         data: cachedQuotes,
@@ -50,8 +66,6 @@ class MarketDataGateway {
         }
       };
     }
-
-    const session = getIndianMarketSession();
     let yahooQuotesMap = new Map();
     try {
       const yahooRes = await yahooFinanceService.getQuotes(uncached);
@@ -89,10 +103,10 @@ class MarketDataGateway {
           name: yahooQuote.name || sym,
           source: "YAHOO_FINANCE",
           sourceType: "YAHOO_QUOTE",
-          isLive: session.isOpen,
-          priceAsOf: yahooQuote.priceAsOf || new Date().toISOString(),
+          isLive: session.isOpen && yahooQuote.isLive === true,
+          priceAsOf: yahooQuote.priceAsOf || (session.isOpen ? new Date().toISOString() : `${session.istDateStr || '2026-10-23'}T15:30:00+05:30`),
           lastUpdatedAt: new Date().toISOString(),
-          dataStatus: session.isOpen ? "LIVE" : "EOD"
+          dataStatus: session.isOpen ? (yahooQuote.isLive ? "LIVE" : "DELAYED") : (yahooQuote.dataStatus && yahooQuote.dataStatus !== 'LIVE' ? yahooQuote.dataStatus : "EOD")
         };
       } else {
         // HONEST YAHOO UNAVAILABLE (ZERO FABRICATION)

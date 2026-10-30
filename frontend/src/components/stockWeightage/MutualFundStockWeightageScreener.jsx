@@ -209,65 +209,39 @@ export default function MutualFundStockWeightageScreener() {
   return (
     <div className="flex flex-col gap-4 animate-in fade-in duration-300">
       
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 text-xs text-slate-500 font-medium pb-1">
-        <span>Mutual Funds</span>
-        <ChevronRight size={13} className="text-slate-400" />
-        <span className="text-slate-900 dark:text-white font-bold">Stock Weightage Screener</span>
-      </nav>
+      {/* ── 1. CATEGORY PILLS & HOW TO USE BUTTON ── */}
+      <div className="flex items-center justify-between gap-3 overflow-x-auto pb-1 scrollbar-none">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
+          {categoryPills.map((item) => {
+            const Icon = item.icon;
+            const isSelected = selectedCategory === item.label;
 
-      {/* ── 1. HEADER ROW WITH TITLE, DATA DISCLAIMER BADGE & HOW TO USE BUTTON ── */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                Stock Weightage Screener
-              </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
-                Discover which stocks are held by mutual funds, analyse their weightage across categories, sectors and identify market trends.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3 self-start sm:self-center max-w-2xl">
-              {/* Data Disclaimer Badge matching reference green container */}
-              <div className="px-3 py-1.5 rounded-xl bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-slate-800 dark:text-slate-200">
-                <p className="text-[10px] leading-tight text-slate-600 dark:text-slate-300">
-                  <span className="font-bold text-slate-900 dark:text-white">Data Disclaimer:</span> Mutual fund holdings and AUM data shown in this screener could be  based on the old and previous data available in our verified data sources. Some holdings may be from an earlier reporting period and may not reflect the funds' current portfolio positions. Data is provided for informational and analytical purposes only and should not be considered real-time or investment advice.
-                </p>
-              </div>
-
-              {/* How to use? Button */}
+            return (
               <button
-                onClick={() => setShowHowToUseModal(true)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-xs transition-colors cursor-pointer shrink-0"
+                key={item.label}
+                onClick={() => handleSelectCategory(item.label)}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-[#0D6B58] text-white shadow-xs'
+                    : 'bg-white dark:bg-[var(--bg-card)] border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
               >
-                <HelpCircle size={14} className="text-blue-500" />
-                <span>How to use?</span>
+                <Icon size={14} className={isSelected ? 'text-white' : 'text-blue-500'} />
+                <span>{item.label}</span>
               </button>
-            </div>
-          </div>
+            );
+          })}
+        </div>
 
-          {/* ── 2. CATEGORY PILLS (6 PILLS MATCHING REFERENCE DESIGN) ── */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {categoryPills.map((item) => {
-              const Icon = item.icon;
-              const isSelected = selectedCategory === item.label;
-
-              return (
-                <button
-                  key={item.label}
-                  onClick={() => handleSelectCategory(item.label)}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-[#0D6B58] text-white shadow-xs'
-                      : 'bg-white dark:bg-[var(--bg-card)] border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <Icon size={14} className={isSelected ? 'text-white' : 'text-blue-500'} />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
+        {/* How to use? Button */}
+        <button
+          onClick={() => setShowHowToUseModal(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-xs transition-colors cursor-pointer shrink-0 ml-auto"
+        >
+          <HelpCircle size={14} className="text-blue-500" />
+          <span>How to use?</span>
+        </button>
+      </div>
 
           {/* ── 3. FILTER BAR (SORT BY & SEARCH BAR) ── */}
           <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl border bg-white dark:bg-[var(--bg-card)] border-slate-200 dark:border-slate-800 shadow-xs">

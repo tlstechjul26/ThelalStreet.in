@@ -2,6 +2,7 @@ import { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import useWebSocket from './hooks/useWebSocket';
+import useAutoAuthPrompt from './hooks/useAutoAuthPrompt';
 import axios from 'axios';
 import { setSectors, setStocks, setIndices, setHowToUseOpen, setRegion, setAssetClass, setActiveView } from './store/slices/marketSlice';
 import { setCredentials, setUser, logout, setError, setAuthModalOpen } from './store/slices/authSlice';
@@ -29,6 +30,8 @@ const MfAnalyticsDashboard = lazy(() => import('./pages/MfAnalyticsDashboard'));
 const IndianMfSectorAnalysis = lazy(() => import('./pages/IndianMfSectorAnalysis'));
 const ComparisonWorkbench = lazy(() => import('./components/ComparisonWorkbench'));
 const DisclaimerPage = lazy(() => import('./pages/DisclaimerPage'));
+const DocumentationPage = lazy(() => import('./pages/DocumentationPage'));
+const TermsOfUsePage = lazy(() => import('./pages/TermsOfUsePage'));
 
 const PageFallback = () => (
   <div className="flex items-center justify-center p-12 min-h-[300px]">
@@ -47,6 +50,9 @@ function App() {
 
   // Initialize WebSocket connection
   useWebSocket();
+
+  // Auto login prompt: 1 min for new/logged-out visitors, re-appears after 10s if dismissed
+  useAutoAuthPrompt();
 
   // Check Upstox connection status
   useEffect(() => {
@@ -75,6 +81,8 @@ function App() {
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const authParam = urlParams.get('auth');
+        const tokenParam = urlParams.get('token');
+
         if (authParam === 'db_unavailable') {
           dispatch(setError('Authentication database service is currently unavailable. Please try again shortly.'));
           dispatch(setAuthModalOpen(true));
@@ -88,24 +96,32 @@ function App() {
           window.history.replaceState({}, document.title, window.location.pathname);
           return;
         }
-        if (authParam === 'google_success') {
-          window.history.replaceState({}, document.title, window.location.pathname);
-          try {
-            const sessionRes = await axios.get(`${API_BASE}/auth/session`, { withCredentials: true });
-            if (sessionRes.data?.token) {
-              dispatch(setCredentials({ token: sessionRes.data.token, user: sessionRes.data.user }));
-              axios.defaults.headers.common['Authorization'] = `Bearer ${sessionRes.data.token}`;
-            }
-          } catch (err) {
-            console.warn('Failed to restore session from cookie:', err.message);
-          }
-          return;
-        }
-        const tokenParam = urlParams.get('token');
 
+        // Helper to extract user payload from JWT token immediately
+        const decodeTokenUser = (jwtToken) => {
+          try {
+            const b64 = jwtToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+            return JSON.parse(decodeURIComponent(escape(atob(b64))));
+          } catch {
+            try {
+              const b64 = jwtToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+              return JSON.parse(atob(b64));
+            } catch {
+              return null;
+            }
+          }
+        };
+
+        // Direct token received from Google OAuth or external redirect
         if (tokenParam) {
-          dispatch(setCredentials({ token: tokenParam, user: null }));
+          localStorage.setItem('marketpulse_token', tokenParam);
+          sessionStorage.removeItem('thelalstreet_unauth_start_time');
+          sessionStorage.removeItem('thelalstreet_auth_prompt_triggered');
           axios.defaults.headers.common['Authorization'] = `Bearer ${tokenParam}`;
+
+          const tokenUser = decodeTokenUser(tokenParam);
+          dispatch(setCredentials({ token: tokenParam, user: tokenUser }));
+          dispatch(setAuthModalOpen(false));
           window.history.replaceState({}, document.title, window.location.pathname);
 
           try {
@@ -121,9 +137,40 @@ function App() {
           return;
         }
 
+        if (authParam === 'google_success') {
+          sessionStorage.removeItem('thelalstreet_unauth_start_time');
+          sessionStorage.removeItem('thelalstreet_auth_prompt_triggered');
+          window.history.replaceState({}, document.title, window.location.pathname);
+          try {
+            const sessionRes = await axios.get(`${API_BASE}/auth/session`, { withCredentials: true });
+            if (sessionRes.data?.token) {
+              localStorage.setItem('marketpulse_token', sessionRes.data.token);
+              axios.defaults.headers.common['Authorization'] = `Bearer ${sessionRes.data.token}`;
+              dispatch(setCredentials({ token: sessionRes.data.token, user: sessionRes.data.user }));
+              dispatch(setAuthModalOpen(false));
+            }
+          } catch (err) {
+            console.warn('Failed to restore session from cookie:', err.message);
+          }
+          return;
+        }
+
         const storedToken = localStorage.getItem('marketpulse_token');
         if (storedToken) {
+          const tokenUser = decodeTokenUser(storedToken);
+          if (tokenUser?.exp && tokenUser.exp * 1000 < Date.now()) {
+            dispatch(logout());
+            return;
+          }
+
+          sessionStorage.removeItem('thelalstreet_unauth_start_time');
+          sessionStorage.removeItem('thelalstreet_auth_prompt_triggered');
           axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+          if (tokenUser) {
+            dispatch(setUser(tokenUser));
+          }
+          dispatch(setAuthModalOpen(false));
+
           try {
             const meRes = await axios.get(`${API_BASE}/auth/me`, {
               headers: { Authorization: `Bearer ${storedToken}` }
@@ -132,7 +179,7 @@ function App() {
               dispatch(setUser(meRes.data.user));
             }
           } catch (err) {
-            if (err.response?.status === 401 || err.response?.status === 403) {
+            if (err.response?.status === 401 && err.response?.data?.error?.includes('revoked')) {
               dispatch(logout());
             }
           }
@@ -260,6 +307,12 @@ function App() {
     } else if (path === '/disclaimer') {
       dispatch(setActiveView('disclaimer'));
       dispatch(setHowToUseOpen(false));
+    } else if (path === '/documentation') {
+      dispatch(setActiveView('documentation'));
+      dispatch(setHowToUseOpen(false));
+    } else if (path === '/terms-of-use' || path === '/terms') {
+      dispatch(setActiveView('terms-of-use'));
+      dispatch(setHowToUseOpen(false));
     } else if (path === '/') {
       dispatch(setActiveView('landing'));
       dispatch(setHowToUseOpen(false));
@@ -285,10 +338,10 @@ function App() {
         <Header />
 
         {/* Market indices ticker strip on inner pages */}
-        {location.pathname !== '/' && location.pathname !== '/how-to-use' && location.pathname !== '/disclaimer' && <MarketIndicesTicker />}
+        {location.pathname !== '/' && location.pathname !== '/how-to-use' && location.pathname !== '/disclaimer' && location.pathname !== '/documentation' && location.pathname !== '/terms-of-use' && location.pathname !== '/terms' && <MarketIndicesTicker />}
 
         {/* Main content area */}
-        <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 md:px-6 py-5">
+        <main className="flex-1 max-w-[1600px] w-full mx-auto px-1 sm:px-4 md:px-6 py-2 sm:py-5">
           <div className="flex flex-col lg:flex-row gap-5">
             {/* Primary content */}
             <div className="flex-1 min-w-0">
@@ -301,6 +354,9 @@ function App() {
                   <Route path="/global-stocks" element={renderGlobalStocksView()} />
                   <Route path="/how-to-use" element={<LandingPage />} />
                   <Route path="/disclaimer" element={<DisclaimerPage />} />
+                  <Route path="/documentation" element={<DocumentationPage />} />
+                  <Route path="/terms-of-use" element={<TermsOfUsePage />} />
+                  <Route path="/terms" element={<Navigate to="/terms-of-use" replace />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>

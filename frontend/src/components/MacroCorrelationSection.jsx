@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { Activity, AlertTriangle, AlertCircle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts';
@@ -15,7 +16,9 @@ const SECTORS = ['Technology', 'Financials', 'Healthcare', 'Infrastructure', 'En
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
-const MacroCorrelationSection = () => {
+const MacroCorrelationSection = ({ isInsideHiddenPage = false }) => {
+  const reduxTheme = useSelector(state => state.market?.theme);
+  const isDark = reduxTheme ? reduxTheme === 'dark' : (typeof document !== 'undefined' && document.documentElement.classList.contains('dark'));
   const [indicator, setIndicator] = useState('repoRate');
   const [sector, setSector] = useState('Technology');
   const [range, setRange] = useState('3y');
@@ -74,15 +77,17 @@ const MacroCorrelationSection = () => {
   const chartData = getChartData();
 
   return (
-    <div className="mt-12 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold">Macro Trend Analysis</h2>
-          <p className="text-[var(--text-muted)] text-sm">
-            Historical correlation between macroeconomic indicators and sector index growth.
-          </p>
+    <div className={isInsideHiddenPage ? "space-y-4" : "mt-2 sm:mt-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl p-6 shadow-sm"}>
+      {!isInsideHiddenPage && (
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold">Macro Trend Analysis</h2>
+            <p className="text-[var(--text-muted)] text-sm">
+              Historical correlation between macroeconomic indicators and sector index growth.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div className="flex flex-wrap gap-4">
@@ -131,8 +136,14 @@ const MacroCorrelationSection = () => {
               <YAxis yAxisId="left" stroke="#818cf8" fontSize={12} domain={['auto', 'auto']} />
               <YAxis yAxisId="right" orientation="right" stroke="#34d399" fontSize={12} domain={['auto', 'auto']} />
               <Tooltip 
-                contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
-                labelStyle={{ color: '#94a3b8' }}
+                contentStyle={{ 
+                  backgroundColor: isDark ? '#1e293b' : '#ffffff', 
+                  borderColor: isDark ? '#334155' : '#cbd5e1', 
+                  color: isDark ? '#f8fafc' : '#0f172a',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                }}
+                labelStyle={{ color: isDark ? '#94a3b8' : '#64748b' }}
               />
               <Legend />
               <Line yAxisId="left" type="stepAfter" dataKey="macroValue" name={INDICATORS.find(i => i.id === indicator)?.label} stroke="#818cf8" strokeWidth={2} dot={false} />

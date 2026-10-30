@@ -24,6 +24,17 @@ router.get('/list', async (req, res) => {
   }
 });
 
+// GET /api/etf/indian (Groww & Zerodha compliant full ETF universe)
+router.get('/indian', async (req, res) => {
+  try {
+    const { category, timeframe } = req.query;
+    const list = await etfService.getAllIndianETFs({ category, timeframe });
+    res.json(list);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/etf/:symbol
 router.get('/:symbol', async (req, res) => {
   try {

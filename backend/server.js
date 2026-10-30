@@ -175,6 +175,7 @@ const globalApiLimiter = rateLimit({
   message: { error: 'Too many requests from this IP. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { singleCount: false },
   store: redisCache.createRateLimitStore(15 * 60 * 1000),
   skip: () => isTest
 });
@@ -298,6 +299,8 @@ const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/trading-das
 
 let reconnectTimer = null;
 let isConnecting = false;
+let reconnectDelayMs = 5000;
+const MAX_RECONNECT_DELAY_MS = 60000;
 
 async function attemptMongoConnect() {
   if (isConnecting || mongoose.connection.readyState === 1 || mongoose.connection.readyState === 2) {
@@ -320,8 +323,9 @@ async function attemptMongoConnect() {
 
 mongoose.connection.on('connected', () => {
   console.log('✅ MongoDB connected successfully');
+  reconnectDelayMs = 5000;
   if (reconnectTimer) {
-    clearInterval(reconnectTimer);
+    clearTimeout(reconnectTimer);
     reconnectTimer = null;
   }
 });
@@ -337,11 +341,16 @@ mongoose.connection.on('error', (err) => {
 
 function startBackgroundReconnect() {
   if (reconnectTimer) return;
-  reconnectTimer = setInterval(async () => {
+  reconnectTimer = setTimeout(async () => {
+    reconnectTimer = null;
     if (mongoose.connection.readyState === 0) {
       await attemptMongoConnect();
+      if (mongoose.connection.readyState === 0) {
+        reconnectDelayMs = Math.min(reconnectDelayMs * 1.5, MAX_RECONNECT_DELAY_MS);
+        startBackgroundReconnect();
+      }
     }
-  }, 10000); // Continually retry every 10s until connection succeeds
+  }, reconnectDelayMs);
 }
 
 // Bounded startup: attempt connection before listening, then start HTTP server

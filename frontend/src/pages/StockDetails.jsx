@@ -100,8 +100,8 @@ export const StockDetails = ({ socket }) => {
     { label: 'Open', value: stockMeta.open ? formatPrice(stockMeta.open, activeSymbol) : '—' },
     { label: 'Prev Close', value: stockMeta.previousClose ? formatPrice(stockMeta.previousClose, activeSymbol) : '—' },
     { label: 'Volume', value: stockMeta.volume ? stockMeta.volume.toLocaleString() : '—' },
-    { label: 'Market Cap', value: formatMarketCap(stockMeta.marketCap, activeSymbol) },
-    { label: 'P/E Ratio', value: stockMeta.pe ? stockMeta.pe : '—' },
+    { label: stockMeta.assetClass === 'etf' ? 'AUM (Fund Size)' : 'Market Cap', value: formatMarketCap(stockMeta.marketCap, activeSymbol) },
+    { label: stockMeta.assetClass === 'etf' ? 'Expense Ratio' : 'P/E Ratio', value: stockMeta.assetClass === 'etf' ? (stockMeta.expenseRatio || '—') : (stockMeta.pe ? stockMeta.pe : '—') },
     { label: 'Div Yield', value: stockMeta.dividendYield ? `${stockMeta.dividendYield}%` : '—' },
     { 
       label: '52W High', 
@@ -157,10 +157,14 @@ export const StockDetails = ({ socket }) => {
       <div className="glass-card p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h2 className="font-display font-bold text-2xl flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-            {stockMeta.symbol}
+            {stockMeta.isIndex ? (stockMeta.displayName || stockMeta.name || stockMeta.symbol) : stockMeta.symbol}
           </h2>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            {stockMeta.name} • {stockMeta.sector || 'General'} Sector
+            {stockMeta.isIndex 
+              ? `${stockMeta.exchange || 'Index'} • Market Benchmark` 
+              : (stockMeta.assetClass === 'etf' 
+                  ? `${stockMeta.categoryLabel || stockMeta.sector || 'ETF'}${stockMeta.underlying ? ` • Benchmark: ${stockMeta.underlying}` : ''}` 
+                  : `${stockMeta.name} • ${stockMeta.sector || 'General'} Sector`)}
           </p>
         </div>
 
@@ -190,8 +194,8 @@ export const StockDetails = ({ socket }) => {
       </div>
 
       {/* Chart Area */}
-      <div className="glass-card overflow-hidden">
-        <TradingViewChart symbol={activeSymbol} socket={socket} />
+      <div className="overflow-hidden rounded-2xl shadow-sm">
+        <TradingViewChart symbol={activeSymbol} socket={socket} assetType="stock" previousClose={stockMeta?.previousClose} />
       </div>
 
       {/* Key Statistics */}

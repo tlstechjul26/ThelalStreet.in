@@ -121,13 +121,29 @@ export async function authenticateToken(req, res, next) {
     }
 
     // Live account existence and revocation check when DB is online
-    if (isDbConnected && decoded.id) {
+    if (isDbConnected && (decoded.id || decoded.email)) {
       try {
-        const user = await User.findById(decoded.id).select('role isRevoked');
-        if (!user || user.isRevoked) {
-          return res.status(401).json({ error: 'User account no longer exists or has been revoked.' });
+        let user = null;
+        if (decoded.id) {
+          try {
+            user = await User.findById(decoded.id).select('role isRevoked');
+          } catch (idErr) {
+            // In case decoded.id threw an error (e.g. cast error)
+            if (decoded.email) {
+              user = await User.findOne({ email: decoded.email.toLowerCase().trim() }).select('role isRevoked');
+            }
+          }
+        } else if (decoded.email) {
+          user = await User.findOne({ email: decoded.email.toLowerCase().trim() }).select('role isRevoked');
         }
-        decoded.role = user.role || 'user';
+
+        if (!user) {
+          return res.status(401).json({ error: 'User account no longer exists. Please log in again.' });
+        }
+        if (user.isRevoked) {
+          return res.status(401).json({ error: 'User account has been revoked.' });
+        }
+        decoded.role = user.role || decoded.role || 'user';
       } catch (dbErr) {
         if (isSensitiveOperation) {
           return res.status(503).json({

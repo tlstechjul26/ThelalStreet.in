@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import SparklineChart from '../SparklineChart';
 import { 
   ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight, Info, Star, 
@@ -14,6 +14,9 @@ function StarHoverTooltip({ fund, isStarred, categorySharpeRange, categorySortin
   const showStar = isStarred === true || fund?.isStarred === true || fund?.starred === true;
 
   if (!showStar) return null;
+
+  const fSharpe = fund?.sharpeRatio ?? fund?.sharpeRatio3Y ?? fund?.riskRatios?.['3Y']?.sharpe ?? fund?.riskRatios?.['All']?.sharpe ?? fund?.riskRatios?.['1Y']?.sharpe ?? null;
+  const fSortino = fund?.sortinoRatio ?? fund?.sortinoRatio3Y ?? fund?.riskRatios?.['3Y']?.sortino ?? fund?.riskRatios?.['All']?.sortino ?? fund?.riskRatios?.['1Y']?.sortino ?? null;
 
   return (
     <div 
@@ -39,7 +42,7 @@ function StarHoverTooltip({ fund, isStarred, categorySharpeRange, categorySortin
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-600 dark:text-slate-400 font-medium">
-                Fund: <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{fund.sharpeRatio != null ? Number(fund.sharpeRatio).toFixed(2) : '—'}</span>
+                Fund: <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{fSharpe != null ? Number(fSharpe).toFixed(2) : '—'}</span>
               </span>
               <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">
                 Range: {categorySharpeRange?.min != null && categorySharpeRange?.max != null
@@ -47,12 +50,12 @@ function StarHoverTooltip({ fund, isStarred, categorySharpeRange, categorySortin
                   : '—'}
               </span>
             </div>
-            {categorySharpeRange?.min != null && categorySharpeRange?.max != null && categorySharpeRange.max > categorySharpeRange.min && fund.sharpeRatio != null ? (
+            {categorySharpeRange?.min != null && categorySharpeRange?.max != null && categorySharpeRange.max > categorySharpeRange.min && fSharpe != null ? (
               <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden relative mt-1">
                 <div 
                   className="bg-blue-600 dark:bg-blue-500 h-full rounded-full transition-all"
                   style={{
-                    width: `${Math.max(0, Math.min(100, ((Number(fund.sharpeRatio) - categorySharpeRange.min) / (categorySharpeRange.max - categorySharpeRange.min)) * 100))}%`
+                    width: `${Math.max(0, Math.min(100, ((Number(fSharpe) - categorySharpeRange.min) / (categorySharpeRange.max - categorySharpeRange.min)) * 100))}%`
                   }}
                 />
               </div>
@@ -69,7 +72,7 @@ function StarHoverTooltip({ fund, isStarred, categorySharpeRange, categorySortin
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-600 dark:text-slate-400 font-medium">
-                Fund: <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{fund.sortinoRatio != null ? Number(fund.sortinoRatio).toFixed(2) : '—'}</span>
+                Fund: <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{fSortino != null ? Number(fSortino).toFixed(2) : '—'}</span>
               </span>
               <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">
                 Range: {categorySortinoRange?.min != null && categorySortinoRange?.max != null
@@ -77,12 +80,12 @@ function StarHoverTooltip({ fund, isStarred, categorySharpeRange, categorySortin
                   : '—'}
               </span>
             </div>
-            {categorySortinoRange?.min != null && categorySortinoRange?.max != null && categorySortinoRange.max > categorySortinoRange.min && fund.sortinoRatio != null ? (
+            {categorySortinoRange?.min != null && categorySortinoRange?.max != null && categorySortinoRange.max > categorySortinoRange.min && fSortino != null ? (
               <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden relative mt-1">
                 <div 
                   className="bg-blue-600 dark:bg-blue-500 h-full rounded-full transition-all"
                   style={{
-                    width: `${Math.max(0, Math.min(100, ((Number(fund.sortinoRatio) - categorySortinoRange.min) / (categorySortinoRange.max - categorySortinoRange.min)) * 100))}%`
+                    width: `${Math.max(0, Math.min(100, ((Number(fSortino) - categorySortinoRange.min) / (categorySortinoRange.max - categorySortinoRange.min)) * 100))}%`
                   }}
                 />
               </div>
@@ -130,26 +133,131 @@ export default function MfRankingTable({
   const [sortCriteria, setSortCriteria] = useState([]);
 
   // Accordion collapsed states (Parent & Subcategory)
+  // By default, parent categories are collapsed so only category rows are visible on initial mount
   const [collapsedParentCats, setCollapsedParentCats] = useState({});
   const [collapsedSubCats, setCollapsedSubCats] = useState({});
   const [categoryViewModes, setCategoryViewModes] = useState({});
+
+  // Hover timer refs for 1000ms delay (1 sec)
+  const parentHoverTimerRef = useRef(null);
+  const subHoverTimerRef = useRef(null);
+
+  // Clear timers on unmount
+  useEffect(() => {
+    return () => {
+      if (parentHoverTimerRef.current) clearTimeout(parentHoverTimerRef.current);
+      if (subHoverTimerRef.current) clearTimeout(subHoverTimerRef.current);
+    };
+  }, []);
+
+  // Reset collapsed states when active market filter changes
+  useEffect(() => {
+    if (parentHoverTimerRef.current) clearTimeout(parentHoverTimerRef.current);
+    if (subHoverTimerRef.current) clearTimeout(subHoverTimerRef.current);
+    setCollapsedParentCats({});
+    setCollapsedSubCats({});
+  }, [activeMarketFilter]);
 
   // Pagination state for All Funds mode
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
   const toggleParentCollapse = (parentKey) => {
-    setCollapsedParentCats(prev => ({
-      ...prev,
-      [parentKey]: !prev[parentKey]
-    }));
+    setCollapsedParentCats(prev => {
+      const isCurrentlyCollapsed = prev[parentKey] !== false; // true by default (collapsed)
+      const willBeExpanded = isCurrentlyCollapsed;
+      if (willBeExpanded && groupedCategories && groupedCategories[parentKey]) {
+        // Expand the subcategories of this parent so funds immediately appear!
+        setCollapsedSubCats(subPrev => {
+          const next = { ...subPrev };
+          Object.keys(groupedCategories[parentKey]).forEach(subKey => {
+            next[`${parentKey}_${subKey}`] = false;
+          });
+          return next;
+        });
+      }
+      return {
+        ...prev,
+        [parentKey]: !isCurrentlyCollapsed
+      };
+    });
+  };
+
+  const handleParentMouseEnter = (parentKey) => {
+    if (parentHoverTimerRef.current) {
+      clearTimeout(parentHoverTimerRef.current);
+      parentHoverTimerRef.current = null;
+    }
+
+    // If already open, do not re-trigger
+    if (collapsedParentCats[parentKey] === false) {
+      return;
+    }
+
+    // Start 1000ms timer (1 sec)
+    parentHoverTimerRef.current = setTimeout(() => {
+      // Open the hovered category and keep others collapsed so it opens cleanly where cursor is
+      setCollapsedParentCats({
+        [parentKey]: false
+      });
+      parentHoverTimerRef.current = null;
+    }, 1000);
+  };
+
+  const handleParentMouseLeave = () => {
+    if (parentHoverTimerRef.current) {
+      clearTimeout(parentHoverTimerRef.current);
+      parentHoverTimerRef.current = null;
+    }
+  };
+
+  const handleParentClick = (parentKey) => {
+    if (parentHoverTimerRef.current) {
+      clearTimeout(parentHoverTimerRef.current);
+      parentHoverTimerRef.current = null;
+    }
+    toggleParentCollapse(parentKey);
   };
 
   const toggleSubCollapse = (subKey) => {
     setCollapsedSubCats(prev => ({
       ...prev,
-      [subKey]: !prev[subKey]
+      [subKey]: prev[subKey] === false ? true : false
     }));
+  };
+
+  const handleSubMouseEnter = (fullSubKey) => {
+    if (subHoverTimerRef.current) {
+      clearTimeout(subHoverTimerRef.current);
+      subHoverTimerRef.current = null;
+    }
+
+    if (collapsedSubCats[fullSubKey] === false) {
+      return;
+    }
+
+    subHoverTimerRef.current = setTimeout(() => {
+      setCollapsedSubCats(prev => ({
+        ...prev,
+        [fullSubKey]: false
+      }));
+      subHoverTimerRef.current = null;
+    }, 1000);
+  };
+
+  const handleSubMouseLeave = () => {
+    if (subHoverTimerRef.current) {
+      clearTimeout(subHoverTimerRef.current);
+      subHoverTimerRef.current = null;
+    }
+  };
+
+  const handleSubClick = (fullSubKey) => {
+    if (subHoverTimerRef.current) {
+      clearTimeout(subHoverTimerRef.current);
+      subHoverTimerRef.current = null;
+    }
+    toggleSubCollapse(fullSubKey);
   };
 
   const toggleCategoryViewMode = (subKey) => {
@@ -169,8 +277,12 @@ export default function MfRankingTable({
       if (key === 'hybrid') return <GitMerge size={16} className="text-blue-600 dark:text-blue-400" />;
       if (key === 'global') return <Globe size={16} className="text-blue-600 dark:text-blue-400" />;
       if (key === 'commodities') return <Coins size={16} className="text-blue-600 dark:text-blue-400" />;
+      if (key === 'fof' || key === 'fund of funds') return <Layers size={16} className="text-blue-600 dark:text-blue-400" />;
       if (key.includes('sector') || key.includes('thematic')) return <LayoutGrid size={16} className="text-blue-600 dark:text-blue-400" />;
+      if (key === 'other' || key === 'solution oriented') return <Sparkles size={16} className="text-blue-600 dark:text-blue-400" />;
     }
+
+    if (key.includes('fof') || key.includes('fund of fund')) return <Layers size={14} className="text-blue-500" />;
 
     if (key.includes('large')) return <Layers size={14} className="text-blue-500" />;
     if (key.includes('mid')) return <PieChart size={14} className="text-blue-500" />;
@@ -240,12 +352,12 @@ export default function MfRankingTable({
   const formatAUM = (aum) => {
     if (aum == null || isNaN(aum) || Number(aum) <= 0) return '—';
     const num = Number(aum);
-    return `₹ ${num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Cr`;
+    return `${num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Cr`;
   };
 
   const formatNAV = (nav) => {
     if (nav == null || isNaN(nav) || Number(nav) <= 0) return '—';
-    return `₹ ${Number(nav).toFixed(2)}`;
+    return Number(nav).toFixed(2);
   };
 
   const formatNavDate = (dateStr) => {
@@ -282,12 +394,47 @@ export default function MfRankingTable({
       : num < 0 
       ? 'text-rose-600 dark:text-rose-400 font-semibold' 
       : 'text-slate-500 dark:text-slate-400';
-    return <span className={`font-mono text-xs ${color}`}>{sign}{num.toFixed(2)}%</span>;
+    return <span className={`font-mono text-[10px] md:text-xs ${color}`}>{sign}{num.toFixed(2)}%</span>;
   };
 
   const formatRatio = (val) => {
     if (val == null || isNaN(val)) return '—';
-    return <span className="font-mono text-xs text-slate-700 dark:text-slate-300 font-medium">{Number(val).toFixed(2)}</span>;
+    return <span className="font-mono text-[10px] md:text-xs text-slate-700 dark:text-slate-300 font-medium">{Number(val).toFixed(2)}</span>;
+  };
+
+  const cleanFundName = (rawName) => {
+    if (!rawName) return '';
+    let name = String(rawName);
+    name = name.replace(/\s*-\s*open[- ]ended(\s+scheme)?/gi, '');
+    name = name.replace(/\bopen[- ]ended(\s+scheme)?\b/gi, '');
+    name = name.replace(/\(open[- ]ended\)/gi, '');
+    name = name.replace(/\bscheme\s*name\b/gi, '');
+    name = name.replace(/\s*-\s*direct\s+plan\s*-\s*growth(\s+option)?/gi, '');
+    name = name.replace(/\s*-\s*direct\s+plan\s*-\s*growth\s+plan/gi, '');
+    name = name.replace(/\s*-\s*direct\s*-\s*growth/gi, '');
+    name = name.replace(/\s*-\s*direct\s+growth/gi, '');
+    name = name.replace(/\s*-\s*direct\s+plan\s*-\s*$/gi, '');
+    name = name.replace(/\s*-\s*direct\s+plan$/gi, '');
+    name = name.replace(/\s*-\s*growth\s+option$/gi, '');
+    name = name.replace(/\s*-\s*growth\s+plan$/gi, '');
+    name = name.replace(/\s*-\s*growth$/gi, '');
+    name = name.replace(/\s*-\s*direct$/gi, '');
+    name = name.replace(/\s*-\s*$/, '').trim();
+    return name || rawName;
+  };
+
+  const getLaunchInfo = (fund) => {
+    let yr = fund.launchYear || fund.inceptionYear;
+    if (!yr && fund.launchDate) {
+      const match = String(fund.launchDate).match(/\b(19\d\d|20\d\d)\b/);
+      if (match) yr = parseInt(match[1], 10);
+    }
+    if (!yr || isNaN(yr)) return null;
+    const numYr = Number(yr);
+    const currentYr = new Date().getFullYear();
+    const diff = currentYr - numYr;
+    const yrsText = diff <= 0 ? '<1 yr' : `${diff} ${diff === 1 ? 'yr' : 'yrs'}`;
+    return `Launched ${numYr} (${yrsText})`;
   };
 
   // Helper to extract clean numeric or string value for sorting
@@ -346,17 +493,19 @@ export default function MfRankingTable({
     }
 
     if (field === 'sharpeRatio') {
-      const val = fund.sharpeRatio != null ? Number(fund.sharpeRatio) : null;
+      const raw = fund.sharpeRatios?.[activeTimeframe] ?? fund.riskRatios?.[activeTimeframe]?.sharpe ?? fund.sharpeRatio ?? fund.sharpeRatio3Y ?? fund.riskRatios?.['3Y']?.sharpe ?? fund.riskRatios?.['All']?.sharpe ?? fund.riskRatios?.['1Y']?.sharpe;
+      const val = raw != null ? Number(raw) : null;
       return val != null && !isNaN(val) ? val : null;
     }
 
     if (field === 'sortinoRatio') {
-      const val = fund.sortinoRatio != null ? Number(fund.sortinoRatio) : null;
+      const raw = fund.sortinoRatios?.[activeTimeframe] ?? fund.riskRatios?.[activeTimeframe]?.sortino ?? fund.sortinoRatio ?? fund.sortinoRatio3Y ?? fund.riskRatios?.['3Y']?.sortino ?? fund.riskRatios?.['All']?.sortino ?? fund.riskRatios?.['1Y']?.sortino;
+      const val = raw != null ? Number(raw) : null;
       return val != null && !isNaN(val) ? val : null;
     }
 
     if (field === 'name') {
-      const n = fund.name || fund.schemeName;
+      const n = cleanFundName(fund.name || fund.schemeName);
       return n ? String(n).trim() : null;
     }
 
@@ -454,14 +603,14 @@ export default function MfRankingTable({
 
   // Compute Sharpe/Sortino ranges for the current page in All Funds Mode (for star tooltips)
   const allFundsSharpeRange = useMemo(() => {
-    const vals = paginatedAllFunds.map(f => f.sharpeRatio).filter(v => v != null && !isNaN(v));
+    const vals = paginatedAllFunds.map(f => f.sharpeRatios?.[activeTimeframe] ?? f.riskRatios?.[activeTimeframe]?.sharpe ?? f.sharpeRatio ?? f.sharpeRatio3Y ?? f.riskRatios?.['3Y']?.sharpe ?? f.riskRatios?.['All']?.sharpe ?? f.riskRatios?.['1Y']?.sharpe).filter(v => v != null && !isNaN(v));
     return vals.length > 0 ? { min: Math.min(...vals), max: Math.max(...vals) } : null;
-  }, [paginatedAllFunds]);
+  }, [paginatedAllFunds, activeTimeframe]);
 
   const allFundsSortinoRange = useMemo(() => {
-    const vals = paginatedAllFunds.map(f => f.sortinoRatio).filter(v => v != null && !isNaN(v));
+    const vals = paginatedAllFunds.map(f => f.sortinoRatios?.[activeTimeframe] ?? f.riskRatios?.[activeTimeframe]?.sortino ?? f.sortinoRatio ?? f.sortinoRatio3Y ?? f.riskRatios?.['3Y']?.sortino ?? f.riskRatios?.['All']?.sortino ?? f.riskRatios?.['1Y']?.sortino).filter(v => v != null && !isNaN(v));
     return vals.length > 0 ? { min: Math.min(...vals), max: Math.max(...vals) } : null;
-  }, [paginatedAllFunds]);
+  }, [paginatedAllFunds, activeTimeframe]);
 
   const totalPages = Math.ceil(allRankedFunds.length / pageSize) || 1;
 
@@ -475,7 +624,7 @@ export default function MfRankingTable({
     return (
       <th
         onClick={() => handleSort(field)}
-        className={`py-3 px-2 font-bold text-[10.5px] uppercase cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap ${alignment} ${
+        className={`py-2 md:py-3 px-1.5 md:px-2 font-bold text-[9px] md:text-[10.5px] uppercase cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap ${alignment} ${
           isSorted ? 'text-blue-600 dark:text-blue-400 bg-slate-50 dark:bg-slate-900/80' : 'text-slate-500 dark:text-slate-400'
         }`}
       >
@@ -518,8 +667,8 @@ export default function MfRankingTable({
       return num > 0 ? num : null;
     };
 
-    const getSharpe = (f) => f.sharpeRatio;
-    const getSortino = (f) => f.sortinoRatio;
+    const getSharpe = (f) => f.sharpeRatios?.[activeTimeframe] ?? f.riskRatios?.[activeTimeframe]?.sharpe ?? f.sharpeRatio ?? f.sharpeRatio3Y ?? f.riskRatios?.['3Y']?.sharpe ?? f.riskRatios?.['All']?.sharpe ?? f.riskRatios?.['1Y']?.sharpe ?? null;
+    const getSortino = (f) => f.sortinoRatios?.[activeTimeframe] ?? f.riskRatios?.[activeTimeframe]?.sortino ?? f.sortinoRatio ?? f.sortinoRatio3Y ?? f.riskRatios?.['3Y']?.sortino ?? f.riskRatios?.['All']?.sortino ?? f.riskRatios?.['1Y']?.sortino ?? null;
 
     // Separate starred funds (pre-computed by calculateFundRankings) from non-starred
     // Strictly enforce at most 3 starred funds per subcategory
@@ -575,12 +724,12 @@ export default function MfRankingTable({
         className="border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-900/60 transition-colors cursor-pointer group"
       >
         {/* Numerical Rank # Column */}
-        <td className="py-2.5 px-3 text-center align-middle font-mono text-[11px] font-medium text-slate-500 dark:text-slate-400 w-8 shrink-0">
+        <td className="py-1.5 md:py-2.5 px-1.5 md:px-3 text-center align-middle font-mono text-[10px] md:text-[11px] font-medium text-slate-500 dark:text-slate-400 w-7 md:w-8 shrink-0">
           {rankDisplay != null ? rankDisplay : '—'}
         </td>
 
         {/* Fund Name Column */}
-        <td className="py-2.5 px-3 min-w-[240px] max-w-[340px] align-middle overflow-visible relative">
+        <td className="py-1.5 md:py-2.5 px-2 md:px-3 min-w-[200px] md:min-w-[240px] max-w-[340px] align-middle overflow-visible relative">
           <div className="flex items-center gap-1.5 min-w-0">
             <StarHoverTooltip
               fund={fund}
@@ -588,97 +737,74 @@ export default function MfRankingTable({
               categorySharpeRange={categorySharpeRange}
               categorySortinoRange={categorySortinoRange}
             />
-            <span className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate" title={fund.name}>
-              {fund.name}
+            <span className="text-[11px] md:text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate" title={fund.name}>
+              {cleanFundName(fund.name || fund.schemeName)}
             </span>
           </div>
-          <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-            <span className="font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 px-1.5 py-0.2 rounded border border-blue-200 dark:border-blue-800/60">
+          <div className="flex items-center gap-1.5 md:gap-2 text-[9px] md:text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+            <span className="font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 px-1 md:px-1.5 py-0.2 rounded border border-blue-200 dark:border-blue-800/60 text-[8.5px] md:text-[10px]">
               {fund.planType || 'Direct Growth'}
             </span>
-            {(fund.fundStructure === 'Open-Ended' || fund.name?.includes('Open-Ended')) && (
-              <span className="font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded border border-emerald-200 dark:border-emerald-800/60" title="Open-Ended Scheme (Distinct from Closed-Ended Series)">
-                Open-Ended
-              </span>
-            )}
-            {(fund.fundStructure === 'Closed-Ended' || fund.name?.includes('Series')) && (
-              <span className="font-medium bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 px-1.5 py-0.2 rounded border border-amber-200 dark:border-amber-800/60" title="Closed-Ended Series (Maturity Gated)">
-                Closed-Ended
-              </span>
-            )}
-            <span>•</span>
-            <span className="truncate">{fund.amc || fund.family || 'Mutual Fund'}</span>
-            {(fund.launchYear || fund.inceptionYear) && (
+            {getLaunchInfo(fund) && (
               <>
                 <span>•</span>
-                <span className="font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
-                  Launched {fund.launchYear || fund.inceptionYear}
-                </span>
-              </>
-            )}
-            {(fund.navAsOfDate || fund.navDate) && (
-              <>
-                <span>•</span>
-                <span className="font-mono text-[9.5px] text-slate-400 dark:text-slate-500" title={`NAV As of: ${fund.navAsOfDate || fund.navDate}${fund.aumAsOfDate ? ` | AUM As of: ${fund.aumAsOfDate}` : ''}`}>
-                  As of {fund.navAsOfDate || fund.navDate}
+                <span className="font-bold text-slate-600 dark:text-slate-400 bg-slate-500/10 px-1 md:px-1.5 py-0.2 rounded border border-slate-500/20 text-[8.5px] md:text-[10px]">
+                  {getLaunchInfo(fund)}
                 </span>
               </>
             )}
           </div>
         </td>
 
-        {/* FUNDS count column (blank for individual funds) */}
-        <td className="py-2.5 px-2 text-center text-xs text-slate-400 font-mono">—</td>
-
         {/* AUM */}
-        <td className="py-2.5 px-2 text-right font-mono text-xs text-slate-800 dark:text-slate-200 font-bold whitespace-nowrap">
+        <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right font-mono text-[10px] md:text-xs text-slate-800 dark:text-slate-200 font-bold whitespace-nowrap">
           {formatAUM(fund.aumMetric === 'AAUM' ? null : (fund.aumCr ?? fund.aum))}
         </td>
 
         {/* NAV */}
         <td 
-          className="py-2.5 px-2 text-right font-mono text-xs text-slate-900 dark:text-slate-100 font-semibold whitespace-nowrap"
+          className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right font-mono text-[10px] md:text-xs text-slate-900 dark:text-slate-100 font-semibold whitespace-nowrap"
           title={`NAV: ${formatNAV(fund.nav)}\nAs of: ${formatNavDate(fund.navAsOfDate || fund.navDate || fund.asOfDate)}`}
         >
           {formatNAV(fund.nav)}
         </td>
 
         {/* Returns */}
-        <td className={`py-2.5 px-2 text-right whitespace-nowrap ${activeTimeframe === '1W' ? 'bg-blue-50/70 dark:bg-blue-950/30' : ''}`}>
+        <td className={`py-1.5 md:py-2.5 px-1.5 md:px-2 text-right whitespace-nowrap ${activeTimeframe === '1W' ? 'bg-blue-50/70 dark:bg-blue-950/30' : ''}`}>
           {formatPct(fund.returns?.['1W'])}
         </td>
-        <td className={`py-2.5 px-2 text-right whitespace-nowrap ${activeTimeframe === '1M' ? 'bg-blue-50/70 dark:bg-blue-950/30' : ''}`}>
+        <td className={`py-1.5 md:py-2.5 px-1.5 md:px-2 text-right whitespace-nowrap ${activeTimeframe === '1M' ? 'bg-blue-50/70 dark:bg-blue-950/30' : ''}`}>
           {formatPct(fund.returns?.['1M'])}
         </td>
-        <td className={`py-2.5 px-2 text-right whitespace-nowrap ${activeTimeframe === '3M' ? 'bg-blue-50/70 dark:bg-blue-950/30' : ''}`}>
+        <td className={`py-1.5 md:py-2.5 px-1.5 md:px-2 text-right whitespace-nowrap ${activeTimeframe === '3M' ? 'bg-blue-50/70 dark:bg-blue-950/30' : ''}`}>
           {formatPct(fund.returns?.['3M'])}
         </td>
-        <td className={`py-2.5 px-2 text-right whitespace-nowrap ${activeTimeframe === '6M' ? 'bg-blue-50/70 dark:bg-blue-950/30' : ''}`}>
+        <td className={`py-1.5 md:py-2.5 px-1.5 md:px-2 text-right whitespace-nowrap ${activeTimeframe === '6M' ? 'bg-blue-50/70 dark:bg-blue-950/30' : ''}`}>
           {formatPct(fund.returns?.['6M'])}
         </td>
-        <td className={`py-2.5 px-2 text-right whitespace-nowrap ${activeTimeframe === '1Y' ? 'bg-blue-50/70 dark:bg-blue-950/30 font-bold' : ''}`}>
+        <td className={`py-1.5 md:py-2.5 px-1.5 md:px-2 text-right whitespace-nowrap ${activeTimeframe === '1Y' ? 'bg-blue-50/70 dark:bg-blue-950/30 font-bold' : ''}`}>
           {formatPct(fund.returns?.['1Y'])}
         </td>
-        <td className={`py-2.5 px-2 text-right whitespace-nowrap ${activeTimeframe === '3Y' ? 'bg-blue-50/70 dark:bg-blue-950/30 font-bold' : ''}`}>
+        <td className={`py-1.5 md:py-2.5 px-1.5 md:px-2 text-right whitespace-nowrap ${activeTimeframe === '3Y' ? 'bg-blue-50/70 dark:bg-blue-950/30 font-bold' : ''}`}>
           {formatPct(fund.returns?.['3Y'])}
         </td>
-        <td className={`py-2.5 px-2 text-right whitespace-nowrap ${activeTimeframe === '5Y' ? 'bg-blue-50/70 dark:bg-blue-950/30 font-bold' : ''}`}>
+        <td className={`py-1.5 md:py-2.5 px-1.5 md:px-2 text-right whitespace-nowrap ${activeTimeframe === '5Y' ? 'bg-blue-50/70 dark:bg-blue-950/30 font-bold' : ''}`}>
           {formatPct(fund.returns?.['5Y'])}
         </td>
-        <td className={`py-2.5 px-2 text-right whitespace-nowrap ${activeTimeframe === 'All' ? 'bg-blue-50/70 dark:bg-blue-950/30 font-bold' : ''}`}>
+        <td className={`py-1.5 md:py-2.5 px-1.5 md:px-2 text-right whitespace-nowrap ${activeTimeframe === 'All' ? 'bg-blue-50/70 dark:bg-blue-950/30 font-bold' : ''}`}>
           {formatPct(fund.returns?.['All'] ?? fund.sinceInceptionReturn)}
         </td>
 
         {/* Risk Ratios */}
-        <td className="py-2.5 px-2 text-right whitespace-nowrap">{formatRatio(fund.sharpeRatio)}</td>
-        <td className="py-2.5 px-2 text-right whitespace-nowrap">{formatRatio(fund.sortinoRatio)}</td>
+        <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right whitespace-nowrap">{formatRatio(fund.sharpeRatios?.[activeTimeframe] ?? fund.riskRatios?.[activeTimeframe]?.sharpe ?? fund.sharpeRatio ?? fund.sharpeRatio3Y ?? fund.riskRatios?.['3Y']?.sharpe ?? fund.riskRatios?.['All']?.sharpe ?? fund.riskRatios?.['1Y']?.sharpe)}</td>
+        <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right whitespace-nowrap">{formatRatio(fund.sortinoRatios?.[activeTimeframe] ?? fund.riskRatios?.[activeTimeframe]?.sortino ?? fund.sortinoRatio ?? fund.sortinoRatio3Y ?? fund.riskRatios?.['3Y']?.sortino ?? fund.riskRatios?.['All']?.sortino ?? fund.riskRatios?.['1Y']?.sortino)}</td>
 
         {/* Sparkline Trend */}
-        <td className="py-2.5 px-2 text-center w-24">
+        <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-center w-20 md:w-24">
           {navSparkline ? (
-            <SparklineChart data={navSparkline} width={65} height={18} color={(fund.returns?.['1Y'] || 0) >= 0 ? '#10b981' : '#ef4444'} />
+            <SparklineChart data={navSparkline} width={60} height={16} color={(fund.returns?.['1Y'] || 0) >= 0 ? '#10b981' : '#ef4444'} />
           ) : (
-            <span className="text-slate-400 text-xs font-mono">—</span>
+            <span className="text-slate-400 text-[10px] md:text-xs font-mono">—</span>
           )}
         </td>
       </tr>
@@ -686,29 +812,16 @@ export default function MfRankingTable({
   };
 
   return (
-    <div className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs flex flex-col my-3">
-      
-      {/* Table Header Strip */}
-      <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
-        <div className="text-[11px] font-extrabold uppercase text-slate-500 dark:text-slate-400 tracking-wider">
-          SCHEME PERFORMANCE & RISK METRICS
-        </div>
-        <div className="text-[10.5px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-mono">
-          <Info size={12} className="text-blue-600 dark:text-blue-400" />
-          <span>Composite Rank = 45% Inception CAGR + 35% Risk Adj + 20% 1Y</span>
-        </div>
-      </div>
-
+    <div className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs flex flex-col my-1.5 md:my-3">
       {/* Main Full-Width Table */}
       <div className="w-full overflow-x-auto scrollbar-thin">
         <table className="w-full text-left border-collapse min-w-[1100px]">
-          <thead className="bg-slate-100/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold text-[10.5px]">
+          <thead className="bg-slate-100/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold text-[9px] md:text-[10.5px]">
             <tr>
-              <th className="py-3 px-3 text-center text-slate-500 dark:text-slate-400 font-normal w-8">#</th>
+              <th className="py-2 md:py-3 px-1.5 md:px-3 text-center text-slate-500 dark:text-slate-400 font-normal w-7 md:w-8">#</th>
               {renderSortHeader('FUND / CATEGORY', 'name', 'text-left')}
-              <th className="py-3 px-2 text-center font-bold text-[10.5px] text-slate-500 dark:text-slate-400 uppercase">FUNDS</th>
-              {renderSortHeader('AUM (₹ Cr)', 'aum', 'text-right')}
-              {renderSortHeader('NAV (₹)', 'nav', 'text-right')}
+              {renderSortHeader('AUM (Cr)', 'aum', 'text-right')}
+              {renderSortHeader('NAV', 'nav', 'text-right')}
               {renderSortHeader('1W %', 'return_1W', 'text-right')}
               {renderSortHeader('1M %', 'return_1M', 'text-right')}
               {renderSortHeader('3M %', 'return_3M', 'text-right')}
@@ -719,7 +832,7 @@ export default function MfRankingTable({
               {renderSortHeader('INCEP. CAGR', 'return_All', 'text-right')}
               {renderSortHeader('SHARPE', 'sharpeRatio', 'text-right')}
               {renderSortHeader('SORTINO', 'sortinoRatio', 'text-right')}
-              <th className="py-3 px-2 text-center text-[10.5px] font-bold text-slate-500 dark:text-slate-400 uppercase">TREND (1Y)</th>
+              <th className="py-2 md:py-3 px-1.5 md:px-2 text-center text-[9px] md:text-[10.5px] font-bold text-slate-500 dark:text-slate-400 uppercase">TREND (1Y)</th>
             </tr>
           </thead>
           <tbody>
@@ -737,8 +850,8 @@ export default function MfRankingTable({
                     const subCount = subData.count || subFunds.length;
                     const subAum = subData.aum;
                     const subReturns = subData.returns || {};
-                    const subSharpe = subData.sharpeRatio;
-                    const subSortino = subData.sortinoRatio;
+                    const subSharpe = subData.sharpeRatio ?? (subFunds.map(getSharpe).filter(v => v != null && !isNaN(v)).length > 0 ? parseFloat((subFunds.map(getSharpe).filter(v => v != null && !isNaN(v)).reduce((a, b) => a + b, 0) / subFunds.map(getSharpe).filter(v => v != null && !isNaN(v)).length).toFixed(2)) : null);
+                    const subSortino = subData.sortinoRatio ?? (subFunds.map(getSortino).filter(v => v != null && !isNaN(v)).length > 0 ? parseFloat((subFunds.map(getSortino).filter(v => v != null && !isNaN(v)).reduce((a, b) => a + b, 0) / subFunds.map(getSortino).filter(v => v != null && !isNaN(v)).length).toFixed(2)) : null);
 
                     const fullSubKey = `${parentKey}_${subKey}`;
                     const isSubCollapsed = collapsedSubCats[fullSubKey] !== false; // collapsed by default until clicked
@@ -751,37 +864,38 @@ export default function MfRankingTable({
                       <React.Fragment key={fullSubKey}>
                         {/* Subcategory Accordion Header Row (Direct top-level row when parent filter selected) */}
                         <tr 
-                          onClick={() => toggleSubCollapse(fullSubKey)}
+                          onClick={() => handleSubClick(fullSubKey)}
+                          onMouseEnter={() => handleSubMouseEnter(fullSubKey)}
+                          onMouseLeave={handleSubMouseLeave}
                           className="bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900/60 border-b border-slate-100 dark:border-slate-900 transition-colors cursor-pointer select-none"
                         >
-                          <td colSpan={2} className="py-2.5 px-3 pl-3">
-                            <div className="flex items-center gap-2">
+                          <td colSpan={2} className="py-1.5 md:py-2.5 px-2 md:px-3 pl-2 md:pl-3">
+                            <div className="flex items-center gap-1.5 md:gap-2">
                               <span className="text-slate-400">
                                 {isSubCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                               </span>
                               {getCategoryIcon(subKey, false)}
-                              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                              <span className="text-[11px] md:text-xs font-bold text-slate-800 dark:text-slate-200">
                                 {subKey}
                               </span>
-                              <span className="text-[10.5px] font-mono font-bold bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/60 px-2 py-0.5 rounded-full">
+                              <span className="text-[9px] md:text-[10.5px] font-mono font-bold bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/60 px-1.5 md:px-2 py-0.5 rounded-full">
                                 {subCount} Funds
                               </span>
                             </div>
                           </td>
-                          <td className="py-2.5 px-2 text-center font-mono text-xs text-slate-500 font-medium">{subCount}</td>
-                          <td className="py-2.5 px-2 text-right font-mono text-xs text-slate-800 dark:text-slate-200 font-bold whitespace-nowrap">{formatAUM(subAum)}</td>
-                          <td className="py-2.5 px-2 text-right font-mono text-xs text-slate-400">—</td>
-                          <td className="py-2.5 px-2 text-right">{formatPct(subReturns['1W'])}</td>
-                          <td className="py-2.5 px-2 text-right">{formatPct(subReturns['1M'])}</td>
-                          <td className="py-2.5 px-2 text-right">{formatPct(subReturns['3M'])}</td>
-                          <td className="py-2.5 px-2 text-right">{formatPct(subReturns['6M'])}</td>
-                          <td className="py-2.5 px-2 text-right">{formatPct(subReturns['1Y'])}</td>
-                          <td className="py-2.5 px-2 text-right">{formatPct(subReturns['3Y'])}</td>
-                          <td className="py-2.5 px-2 text-right">{formatPct(subReturns['5Y'])}</td>
-                          <td className="py-2.5 px-2 text-right">{formatPct(subReturns['All'])}</td>
-                          <td className="py-2.5 px-2 text-right">{formatRatio(subSharpe)}</td>
-                          <td className="py-2.5 px-2 text-right">{formatRatio(subSortino)}</td>
-                          <td className="py-2.5 px-2 text-center w-24">
+                          <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right font-mono text-[10px] md:text-xs text-slate-800 dark:text-slate-200 font-bold whitespace-nowrap">{formatAUM(subAum)}</td>
+                          <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right font-mono text-[10px] md:text-xs text-slate-400">—</td>
+                          <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatPct(subReturns['1W'])}</td>
+                          <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatPct(subReturns['1M'])}</td>
+                          <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatPct(subReturns['3M'])}</td>
+                          <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatPct(subReturns['6M'])}</td>
+                          <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatPct(subReturns['1Y'])}</td>
+                          <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatPct(subReturns['3Y'])}</td>
+                          <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatPct(subReturns['5Y'])}</td>
+                          <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatPct(subReturns['All'])}</td>
+                          <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatRatio(subSharpe)}</td>
+                          <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatRatio(subSortino)}</td>
+                          <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-center w-20 md:w-24">
                             <SparklineChart data={[100, 101, 103, 102, 106]} width={60} height={16} color={(subReturns['1Y'] || 0) >= 0 ? '#10b981' : '#ef4444'} />
                           </td>
                         </tr>
@@ -792,7 +906,7 @@ export default function MfRankingTable({
                         {/* View All / Show Top 5 Inline Button */}
                         {!isSubCollapsed && subFunds.length > 5 && (
                           <tr className="bg-slate-50/50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800">
-                            <td colSpan={16} className="py-2 px-8 text-left">
+                            <td colSpan={15} className="py-2 px-8 text-left">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -800,7 +914,7 @@ export default function MfRankingTable({
                                 }}
                                 className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors inline-flex items-center gap-1"
                               >
-                                {viewMode === 'top5' ? `View All ${subFunds.length} ${subKey} Funds →` : '← Show Top 5'}
+                                {viewMode === 'top5' ? `View All ${subFunds.length} ${subKey} Funds →` : '←  Show Top 5'}
                               </button>
                             </td>
                           </tr>
@@ -817,48 +931,49 @@ export default function MfRankingTable({
                   const parentCount = parentData.count || 0;
                   const parentAum = parentData.aum;
                   const parentReturns = parentData.returns || {};
-                  const parentSharpe = parentData.sharpeRatio;
-                  const parentSortino = parentData.sortinoRatio;
+                  const parentSharpe = parentData.sharpeRatio ?? (parentData.funds?.map(getSharpe).filter(v => v != null && !isNaN(v)).length > 0 ? parseFloat((parentData.funds.map(getSharpe).filter(v => v != null && !isNaN(v)).reduce((a, b) => a + b, 0) / parentData.funds.map(getSharpe).filter(v => v != null && !isNaN(v)).length).toFixed(2)) : null);
+                  const parentSortino = parentData.sortinoRatio ?? (parentData.funds?.map(getSortino).filter(v => v != null && !isNaN(v)).length > 0 ? parseFloat((parentData.funds.map(getSortino).filter(v => v != null && !isNaN(v)).reduce((a, b) => a + b, 0) / parentData.funds.map(getSortino).filter(v => v != null && !isNaN(v)).length).toFixed(2)) : null);
 
-                  const isParentCollapsed = collapsedParentCats[parentKey];
+                  const isParentCollapsed = collapsedParentCats[parentKey] !== false;
 
                   return (
                     <React.Fragment key={parentKey}>
                       {/* LEVEL 1: Parent Category Row */}
                       <tr 
-                        onClick={() => toggleParentCollapse(parentKey)}
+                        onClick={() => handleParentClick(parentKey)}
+                        onMouseEnter={() => handleParentMouseEnter(parentKey)}
+                        onMouseLeave={handleParentMouseLeave}
                         className="bg-slate-50 dark:bg-slate-900/90 hover:bg-slate-100 dark:hover:bg-slate-900 border-y border-slate-200 dark:border-slate-800 transition-colors cursor-pointer select-none font-bold"
                       >
-                        <td colSpan={2} className="py-3 px-3">
-                          <div className="flex items-center gap-2">
+                        <td colSpan={2} className="py-2 md:py-3 px-2 md:px-3">
+                          <div className="flex items-center gap-1.5 md:gap-2">
                             <span className="text-slate-500 dark:text-slate-400">
                               {isParentCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                             </span>
                             <span className="p-1 bg-blue-50 dark:bg-blue-950/60 rounded-md">
                               {getCategoryIcon(parentKey, true)}
                             </span>
-                            <span className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                            <span className="text-[11px] md:text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
                               {parentKey.replace(/_/g, ' ')}
                             </span>
-                            <span className="text-[11px] font-mono font-extrabold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/60 px-2.5 py-0.5 rounded-full">
+                            <span className="text-[9.5px] md:text-[11px] font-mono font-extrabold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/60 px-2 md:px-2.5 py-0.5 rounded-full">
                               {parentCount.toLocaleString('en-IN')} Funds
                             </span>
                           </div>
                         </td>
-                        <td className="py-3 px-2 text-center font-mono text-xs text-slate-600 dark:text-slate-400 font-bold">{parentCount}</td>
-                        <td className="py-3 px-2 text-right font-mono text-xs text-slate-900 dark:text-slate-100 font-black whitespace-nowrap">{formatAUM(parentAum)}</td>
-                        <td className="py-3 px-2 text-right font-mono text-xs text-slate-400">—</td>
-                        <td className="py-3 px-2 text-right">{formatPct(parentReturns['1W'])}</td>
-                        <td className="py-3 px-2 text-right">{formatPct(parentReturns['1M'])}</td>
-                        <td className="py-3 px-2 text-right">{formatPct(parentReturns['3M'])}</td>
-                        <td className="py-3 px-2 text-right">{formatPct(parentReturns['6M'])}</td>
-                        <td className="py-3 px-2 text-right">{formatPct(parentReturns['1Y'])}</td>
-                        <td className="py-3 px-2 text-right">{formatPct(parentReturns['3Y'])}</td>
-                        <td className="py-3 px-2 text-right">{formatPct(parentReturns['5Y'])}</td>
-                        <td className="py-3 px-2 text-right">{formatPct(parentReturns['All'])}</td>
-                        <td className="py-3 px-2 text-right">{formatRatio(parentSharpe)}</td>
-                        <td className="py-3 px-2 text-right">{formatRatio(parentSortino)}</td>
-                        <td className="py-3 px-2 text-center w-24">
+                        <td className="py-2 md:py-3 px-1.5 md:px-2 text-right font-mono text-[10px] md:text-xs text-slate-900 dark:text-slate-100 font-black whitespace-nowrap">{formatAUM(parentAum)}</td>
+                        <td className="py-2 md:py-3 px-1.5 md:px-2 text-right font-mono text-[10px] md:text-xs text-slate-400">—</td>
+                        <td className="py-2 md:py-3 px-1.5 md:px-2 text-right">{formatPct(parentReturns['1W'])}</td>
+                        <td className="py-2 md:py-3 px-1.5 md:px-2 text-right">{formatPct(parentReturns['1M'])}</td>
+                        <td className="py-2 md:py-3 px-1.5 md:px-2 text-right">{formatPct(parentReturns['3M'])}</td>
+                        <td className="py-2 md:py-3 px-1.5 md:px-2 text-right">{formatPct(parentReturns['6M'])}</td>
+                        <td className="py-2 md:py-3 px-1.5 md:px-2 text-right">{formatPct(parentReturns['1Y'])}</td>
+                        <td className="py-2 md:py-3 px-1.5 md:px-2 text-right">{formatPct(parentReturns['3Y'])}</td>
+                        <td className="py-2 md:py-3 px-1.5 md:px-2 text-right">{formatPct(parentReturns['5Y'])}</td>
+                        <td className="py-2 md:py-3 px-1.5 md:px-2 text-right">{formatPct(parentReturns['All'])}</td>
+                        <td className="py-2 md:py-3 px-1.5 md:px-2 text-right">{formatRatio(parentSharpe)}</td>
+                        <td className="py-2 md:py-3 px-1.5 md:px-2 text-right">{formatRatio(parentSortino)}</td>
+                        <td className="py-2 md:py-3 px-1.5 md:px-2 text-center w-20 md:w-24">
                           <SparklineChart data={[100, 102, 101, 105, 108]} width={65} height={18} color={(parentReturns['1Y'] || 0) >= 0 ? '#10b981' : '#ef4444'} />
                         </td>
                       </tr>
@@ -870,8 +985,8 @@ export default function MfRankingTable({
                         const subCount = subData.count || subFunds.length;
                         const subAum = subData.aum;
                         const subReturns = subData.returns || {};
-                        const subSharpe = subData.sharpeRatio;
-                        const subSortino = subData.sortinoRatio;
+                        const subSharpe = subData.sharpeRatio ?? (subFunds.map(getSharpe).filter(v => v != null && !isNaN(v)).length > 0 ? parseFloat((subFunds.map(getSharpe).filter(v => v != null && !isNaN(v)).reduce((a, b) => a + b, 0) / subFunds.map(getSharpe).filter(v => v != null && !isNaN(v)).length).toFixed(2)) : null);
+                        const subSortino = subData.sortinoRatio ?? (subFunds.map(getSortino).filter(v => v != null && !isNaN(v)).length > 0 ? parseFloat((subFunds.map(getSortino).filter(v => v != null && !isNaN(v)).reduce((a, b) => a + b, 0) / subFunds.map(getSortino).filter(v => v != null && !isNaN(v)).length).toFixed(2)) : null);
 
                         const fullSubKey = `${parentKey}_${subKey}`;
                         const isSubCollapsed = collapsedSubCats[fullSubKey] !== false; // collapsed by default until clicked
@@ -884,37 +999,38 @@ export default function MfRankingTable({
                           <React.Fragment key={fullSubKey}>
                             {/* Subcategory Accordion Header Row (Indented matching user screenshot) */}
                             <tr 
-                              onClick={() => toggleSubCollapse(fullSubKey)}
+                              onClick={() => handleSubClick(fullSubKey)}
+                              onMouseEnter={() => handleSubMouseEnter(fullSubKey)}
+                              onMouseLeave={handleSubMouseLeave}
                               className="bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900/60 border-b border-slate-100 dark:border-slate-900 transition-colors cursor-pointer select-none"
                             >
-                              <td colSpan={2} className="py-2.5 px-3 pl-8">
-                                <div className="flex items-center gap-2">
+                              <td colSpan={2} className="py-1.5 md:py-2.5 px-2 md:px-3 pl-4 md:pl-8">
+                                <div className="flex items-center gap-1.5 md:gap-2">
                                   <span className="text-slate-400">
                                     {isSubCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                                   </span>
                                   {getCategoryIcon(subKey, false)}
-                                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                  <span className="text-[11px] md:text-xs font-bold text-slate-800 dark:text-slate-200">
                                     {subKey}
                                   </span>
-                                  <span className="text-[10.5px] font-mono font-bold bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/60 px-2 py-0.5 rounded-full">
+                                  <span className="text-[9px] md:text-[10.5px] font-mono font-bold bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/60 px-1.5 md:px-2 py-0.5 rounded-full">
                                     {subCount} Funds
                                   </span>
                                 </div>
                               </td>
-                              <td className="py-2.5 px-2 text-center font-mono text-xs text-slate-500 font-medium">{subCount}</td>
-                              <td className="py-2.5 px-2 text-right font-mono text-xs text-slate-800 dark:text-slate-200 font-bold whitespace-nowrap">{formatAUM(subAum)}</td>
-                              <td className="py-2.5 px-2 text-right font-mono text-xs text-slate-400">—</td>
-                              <td className="py-2.5 px-2 text-right">{formatPct(subReturns['1W'])}</td>
-                              <td className="py-2.5 px-2 text-right">{formatPct(subReturns['1M'])}</td>
-                              <td className="py-2.5 px-2 text-right">{formatPct(subReturns['3M'])}</td>
-                              <td className="py-2.5 px-2 text-right">{formatPct(subReturns['6M'])}</td>
-                              <td className="py-2.5 px-2 text-right">{formatPct(subReturns['1Y'])}</td>
-                              <td className="py-2.5 px-2 text-right">{formatPct(subReturns['3Y'])}</td>
-                              <td className="py-2.5 px-2 text-right">{formatPct(subReturns['5Y'])}</td>
-                              <td className="py-2.5 px-2 text-right">{formatPct(subReturns['All'])}</td>
-                              <td className="py-2.5 px-2 text-right">{formatRatio(subSharpe)}</td>
-                              <td className="py-2.5 px-2 text-right">{formatRatio(subSortino)}</td>
-                              <td className="py-2.5 px-2 text-center w-24">
+                              <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right font-mono text-[10px] md:text-xs text-slate-800 dark:text-slate-200 font-bold whitespace-nowrap">{formatAUM(subAum)}</td>
+                              <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right font-mono text-[10px] md:text-xs text-slate-400">—</td>
+                              <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatPct(subReturns['1W'])}</td>
+                              <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatPct(subReturns['1M'])}</td>
+                              <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatPct(subReturns['3M'])}</td>
+                              <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatPct(subReturns['6M'])}</td>
+                              <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatPct(subReturns['1Y'])}</td>
+                              <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatPct(subReturns['3Y'])}</td>
+                              <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatPct(subReturns['5Y'])}</td>
+                              <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatPct(subReturns['All'])}</td>
+                              <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatRatio(subSharpe)}</td>
+                              <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-right">{formatRatio(subSortino)}</td>
+                              <td className="py-1.5 md:py-2.5 px-1.5 md:px-2 text-center w-20 md:w-24">
                                 <SparklineChart data={[100, 101, 103, 102, 106]} width={60} height={16} color={(subReturns['1Y'] || 0) >= 0 ? '#10b981' : '#ef4444'} />
                               </td>
                             </tr>
@@ -925,7 +1041,7 @@ export default function MfRankingTable({
                             {/* View All / Show Top 5 Inline Button */}
                             {!isSubCollapsed && subFunds.length > 5 && (
                               <tr className="bg-slate-50/50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800">
-                                <td colSpan={16} className="py-2 px-8 text-left">
+                                <td colSpan={15} className="py-2 px-8 text-left">
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -933,7 +1049,7 @@ export default function MfRankingTable({
                                     }}
                                     className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors inline-flex items-center gap-1"
                                   >
-                                    {viewMode === 'top5' ? `View All ${subFunds.length} ${subKey} Funds →` : '← Show Top 5'}
+                                    {viewMode === 'top5' ? `View All ${subFunds.length} ${subKey} Funds →` : '←  Show Top 5'}
                                   </button>
                                 </td>
                               </tr>
@@ -950,7 +1066,7 @@ export default function MfRankingTable({
               paginatedAllFunds.map((fund, idx) => renderFundRow(fund, idx, null, allFundsSharpeRange, allFundsSortinoRange, 'all'))
             ) : (
               <tr>
-                <td colSpan={16} className="py-12 text-center text-slate-500 text-xs">
+                <td colSpan={15} className="py-12 text-center text-slate-500 text-xs">
                   No mutual fund schemes match the selected category filters.
                 </td>
               </tr>
@@ -961,9 +1077,9 @@ export default function MfRankingTable({
 
       {/* Pagination Footer (ONLY in All Funds Mode) */}
       {isAllFundsMode && (
-        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 select-none">
+        <div className="px-2.5 md:px-4 py-2 md:py-3 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-3 bg-white dark:bg-slate-900 select-none text-[10.5px] md:text-xs">
           {/* Left: Item Range */}
-          <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+          <div className="text-[10.5px] md:text-xs text-slate-500 dark:text-slate-400 font-medium">
             Showing <span className="font-bold text-slate-900 dark:text-slate-100">{allRankedFunds.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}</span> to <span className="font-bold text-slate-900 dark:text-slate-100">{Math.min(currentPage * pageSize, allRankedFunds.length)}</span> of <span className="font-bold text-slate-900 dark:text-slate-100">{allRankedFunds.length.toLocaleString('en-IN')}</span> funds
           </div>
 
@@ -1081,11 +1197,11 @@ export default function MfRankingTable({
 
       {/* Footer Strip in Category Mode matching Pic 2 */}
       {!isAllFundsMode && (
-        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/50 dark:bg-slate-900/50 text-xs text-slate-500 font-medium select-none">
+        <div className="px-2.5 md:px-4 py-2 md:py-3 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 md:gap-2 bg-slate-50/50 dark:bg-slate-900/50 text-[10.5px] md:text-xs text-slate-500 font-medium select-none">
           <div>
             Showing <span className="font-bold text-slate-900 dark:text-slate-100">1 to {funds.length.toLocaleString('en-IN')}</span> of <span className="font-bold text-slate-900 dark:text-slate-100">{funds.length.toLocaleString('en-IN')}</span> funds
           </div>
-          <div className="text-[11px] text-slate-400 font-mono">
+          <div className="text-[9.5px] md:text-[11px] text-slate-400 font-mono">
             Source: AMFI, SEBI, Exchanges &nbsp;|&nbsp; All data is for educational purposes only
           </div>
         </div>

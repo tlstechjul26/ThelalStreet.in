@@ -170,6 +170,14 @@ class UnifiedAssetService {
 
         sharpeRatio: (riskMetrics && riskMetrics.sharpeRatio !== null) ? riskMetrics.sharpeRatio : calcMetrics.sharpeRatio,
         sortinoRatio: (riskMetrics && riskMetrics.sortinoRatio !== null) ? riskMetrics.sortinoRatio : calcMetrics.sortinoRatio,
+        sharpeRatio3Y: calcMetrics.sharpeRatio3Y ?? calcMetrics.sharpeRatio ?? (riskMetrics?.sharpeRatio ?? null),
+        sortinoRatio3Y: calcMetrics.sortinoRatio3Y ?? calcMetrics.sortinoRatio ?? (riskMetrics?.sortinoRatio ?? null),
+        riskRatios: calcMetrics.riskRatios || (calcMetrics.sharpeRatio != null ? {
+          '1Y': { sharpe: calcMetrics.sharpeRatio1Y ?? calcMetrics.sharpeRatio, sortino: calcMetrics.sortinoRatio1Y ?? calcMetrics.sortinoRatio },
+          '3Y': { sharpe: calcMetrics.sharpeRatio3Y ?? calcMetrics.sharpeRatio, sortino: calcMetrics.sortinoRatio3Y ?? calcMetrics.sortinoRatio },
+          '5Y': { sharpe: calcMetrics.sharpeRatio5Y ?? calcMetrics.sharpeRatio, sortino: calcMetrics.sortinoRatio5Y ?? calcMetrics.sortinoRatio },
+          'All': { sharpe: calcMetrics.sharpeRatioInception ?? calcMetrics.sharpeRatio, sortino: calcMetrics.sortinoRatioInception ?? calcMetrics.sortinoRatio }
+        } : null),
         launchYear: calcMetrics.launchYear ?? null,
         inceptionYear: calcMetrics.inceptionYear ?? null,
         launchDate: calcMetrics.launchDate ?? null,
@@ -262,6 +270,8 @@ class UnifiedAssetService {
 
       return {
         ...profile,
+        id: profile?.schemeCode || id,
+        schemeCode: profile?.schemeCode || id,
         name,
         schemeName: name,
         category,

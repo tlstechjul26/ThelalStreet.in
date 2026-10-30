@@ -80,8 +80,9 @@ export default function Header() {
     dispatch(setAssetClass('indian-mf'));
     setSearchOpen(false);
     setLocalQuery('');
-    navigate(`/mutual-funds?q=${encodeURIComponent(fund.name)}&schemeCode=${encodeURIComponent(fund.schemeCode || '')}`, {
-      state: { searchQuery: fund.name, selectedSchemeCode: fund.schemeCode }
+    const code = fund.schemeCode || fund.id || '';
+    navigate(`/mutual-funds?q=${encodeURIComponent(fund.name || fund.schemeName || '')}&schemeCode=${encodeURIComponent(code)}`, {
+      state: { searchQuery: fund.name || fund.schemeName, selectedSchemeCode: code, activeModalFund: fund }
     });
   };
 
@@ -205,20 +206,20 @@ export default function Header() {
     (results.sectors && results.sectors.length > 0);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b" style={{ borderColor: 'var(--border-color)', background: 'var(--bg-primary)', backdropFilter: 'blur(12px)' }}>
-      <div className="max-w-[1600px] mx-auto px-4 md:px-6">
+    <header className="sticky top-0 z-50 w-full border-b overflow-x-hidden" style={{ borderColor: 'var(--border-color)', background: 'var(--bg-primary)', backdropFilter: 'blur(12px)' }}>
+      <div className="max-w-[1600px] mx-auto px-3 sm:px-4 md:px-6 w-full">
         {/* Main header row */}
-        <div className="flex items-center justify-between h-16 gap-3 sm:gap-6">
+        <div className="flex items-center justify-between h-14 sm:h-16 gap-2 sm:gap-6 w-full min-w-0">
           {/* Logo */}
           <button 
             onClick={handleNavLanding}
-            className="flex items-center gap-2 shrink-0 group focus:outline-none"
+            className="flex items-center gap-1.5 sm:gap-2 shrink-0 group focus:outline-none"
             title="The lal Street - Home"
           >
             <img 
               src={theme === 'dark' ? '/branding/logo-dark-trimmed.png' : '/branding/logo-light-trimmed.png'} 
               alt="The lal Street"
-              className="h-8 sm:h-9 md:h-10 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+              className="h-7 sm:h-9 md:h-10 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
               onError={(e) => {
                 // Fallback to original if trimmed not loaded
                 e.target.src = theme === 'dark' ? '/branding/logo-dark.png' : '/branding/logo-light.png';
@@ -285,16 +286,16 @@ export default function Header() {
           </nav>
 
           {/* Search Bar */}
-          <div ref={searchRef} className="relative flex-1 max-w-xs sm:max-w-sm md:max-w-md">
+          <div ref={searchRef} className="relative flex-1 min-w-0 max-w-xs sm:max-w-sm md:max-w-md">
             <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+              <Search size={15} className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
               <input
                 type="text"
-                placeholder="Search stocks, mutual funds, ETFs..."
+                placeholder="Search stocks, funds..."
                 value={localQuery}
                 onChange={(e) => { setLocalQuery(e.target.value); setSearchOpen(true); }}
                 onFocus={() => setSearchOpen(true)}
-                className="w-full pl-9 pr-8 py-2 rounded-lg text-xs sm:text-sm transition-colors focus:outline-none focus:ring-1"
+                className="w-full min-w-0 pl-7 sm:pl-9 pr-7 sm:pr-8 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm transition-colors focus:outline-none focus:ring-1"
                 style={{
                   background: 'var(--bg-card)',
                   border: '1px solid var(--border-color)',
@@ -303,7 +304,7 @@ export default function Header() {
                 }}
               />
               {localQuery && (
-                <button onClick={() => { setLocalQuery(''); setSearchOpen(false); }} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+                <button onClick={() => { setLocalQuery(''); setSearchOpen(false); }} className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
                   <X size={14} />
                 </button>
               )}
@@ -362,7 +363,7 @@ export default function Header() {
                         </div>
                         {f.nav && (
                           <span className="text-xs font-mono font-semibold ml-auto shrink-0 text-emerald-600 dark:text-emerald-400">
-                            ₹{f.nav}
+                            {f.nav}
                           </span>
                         )}
                       </button>
@@ -402,7 +403,7 @@ export default function Header() {
                       >
                         <Grid3X3 size={14} style={{ color: 'var(--accent)' }} />
                         {s.name}
-                        <span className="text-xs ml-auto" style={{ color: 'var(--text-muted)' }}>{s.region === 'india' ? '🇮🇳' : '🌍'}</span>
+                        <span className="text-xs ml-auto" style={{ color: 'var(--text-muted)' }}>{s.region === 'india' ? 'ðŸ‡®ðŸ‡³' : 'ðŸŒ'}</span>
                       </button>
                     ))}
                   </div>
@@ -412,7 +413,7 @@ export default function Header() {
           </div>
 
           {/* Right controls */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {/* Disclaimer badge on extra large screens */}
             <div className="hidden 2xl:flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
               <AlertTriangle size={11} />
@@ -422,11 +423,11 @@ export default function Header() {
             {/* Theme toggle */}
             <button
               onClick={toggleTheme}
-              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--bg-card-hover)]"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--bg-card-hover)]"
               style={{ color: 'var(--text-secondary)' }}
               title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             >
-              {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
             </button>
 
             {/* User profile avatar matching mockup */}
@@ -439,7 +440,7 @@ export default function Header() {
                     setUserMenuOpen(!userMenuOpen);
                   }
                 }}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all ${
                   isAuthenticated 
                     ? 'bg-blue-600 text-white font-bold text-xs shadow-xs hover:bg-blue-700' 
                     : 'bg-blue-600/10 text-blue-600 dark:text-blue-400 hover:bg-blue-600/20'
@@ -449,7 +450,7 @@ export default function Header() {
                 {isAuthenticated && (user?.name || user?.email) ? (
                   <span>{(user.name || user.email)[0].toUpperCase()}</span>
                 ) : (
-                  <User size={16} />
+                  <User size={15} />
                 )}
               </button>
 
@@ -485,11 +486,11 @@ export default function Header() {
             {/* Mobile menu hamburger toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--bg-card-hover)]"
+              className="lg:hidden w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--bg-card-hover)]"
               style={{ color: 'var(--text-secondary)' }}
               title="Open menu"
             >
-              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+              {mobileMenuOpen ? <X size={16} /> : <Menu size={16} />}
             </button>
           </div>
         </div>

@@ -11,7 +11,6 @@ import {
   setHowToUseTab 
 } from '../store/slices/marketSlice';
 import { 
-  FileText, 
   ExternalLink, 
   Globe, 
   Shield, 
@@ -22,7 +21,9 @@ import {
   MessageCircle,
   Instagram,
   Linkedin,
-  ShieldAlert
+  ShieldAlert,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 export default function Footer() {
@@ -30,6 +31,17 @@ export default function Footer() {
   const navigate = useNavigate();
   const { lastUpdated, theme } = useSelector(state => state.market);
   const [legalModal, setLegalModal] = useState(null); // 'privacy' | 'terms' | null
+  const [mobileSectionsOpen, setMobileSectionsOpen] = useState({
+    product: false,
+    documentation: false,
+    support: false,
+    corporate: false
+  });
+  const [mobileDisclaimerExpanded, setMobileDisclaimerExpanded] = useState(false);
+
+  const toggleMobileSection = (key) => {
+    setMobileSectionsOpen(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const formatTime = (isoStr) => {
     if (!isoStr) return '—';
@@ -88,11 +100,34 @@ export default function Footer() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleNavTermsOfUse = () => {
+    dispatch(setActiveView('terms-of-use'));
+    dispatch(setHowToUseOpen(false));
+    navigate('/terms-of-use');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleNavDocumentation = (sectionId) => {
+    dispatch(setActiveView('documentation'));
+    dispatch(setHowToUseOpen(false));
+    navigate('/documentation' + (sectionId ? `#${sectionId}` : ''));
+    if (sectionId) {
+      setTimeout(() => {
+        const el = document.getElementById(sectionId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 150);
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   return (
-    <footer className="w-full border-t mt-auto" style={{ borderColor: 'var(--border-color)', background: 'var(--bg-secondary)' }}>
+    <footer className="w-full max-w-full overflow-x-hidden border-t mt-auto" style={{ borderColor: 'var(--border-color)', background: 'var(--bg-secondary)' }}>
       {/* Upper Footer Columns */}
-      <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-10 sm:py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10">
+      <div className="max-w-[1600px] mx-auto px-3 sm:px-4 md:px-6 py-8 sm:py-12 w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 sm:gap-6 lg:gap-8">
           
           {/* Column 1: Brand & Bio */}
           <div className="space-y-4">
@@ -162,10 +197,18 @@ export default function Footer() {
 
           {/* Column 2: Product Links */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>
+            <h4 className="hidden sm:block text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>
               Product
             </h4>
-            <ul className="space-y-2 text-xs sm:text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+            <button 
+              onClick={() => toggleMobileSection('product')}
+              className="sm:hidden flex items-center justify-between w-full py-1 text-xs font-bold uppercase tracking-wider border-b border-slate-800" 
+              style={{ color: 'var(--text-primary)' }}
+            >
+              <span>Product</span>
+              {mobileSectionsOpen.product ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            </button>
+            <ul className={`space-y-2 text-xs sm:text-sm font-medium ${mobileSectionsOpen.product ? 'block' : 'hidden sm:block'}`} style={{ color: 'var(--text-muted)' }}>
               <li>
                 <button 
                   onClick={handleNavStocks} 
@@ -209,12 +252,74 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Column 3: Support & Legal */}
+          {/* Column 3: Documentation Links */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>
+            <h4 
+              onClick={() => handleNavDocumentation()}
+              className="hidden sm:block text-xs font-bold uppercase tracking-wider cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors" 
+              style={{ color: 'var(--text-primary)' }}
+              title="Open Documentation"
+            >
+              Documentation
+            </h4>
+            <button 
+              onClick={() => toggleMobileSection('documentation')}
+              className="sm:hidden flex items-center justify-between w-full py-1 text-xs font-bold uppercase tracking-wider border-b border-slate-800" 
+              style={{ color: 'var(--text-primary)' }}
+            >
+              <span>Documentation</span>
+              {mobileSectionsOpen.documentation ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            </button>
+            <ul className={`space-y-2 text-xs sm:text-sm font-medium ${mobileSectionsOpen.documentation ? 'block' : 'hidden sm:block'}`} style={{ color: 'var(--text-muted)' }}>
+              <li>
+                <button 
+                  onClick={handleNavTermsOfUse} 
+                  className="text-left transition-colors hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  Terms of Use
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => handleNavDocumentation('stocks-calculations')} 
+                  className="text-left transition-colors hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  Stocks Data Calculations
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => handleNavDocumentation('mutual-funds-calculations')} 
+                  className="text-left transition-colors hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  Mutual Funds Data Calculations
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => handleNavDocumentation('stock-weightage-screener')} 
+                  className="text-left transition-colors hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  Stocks Weightage Screener Calculations
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 4: Support & Legal */}
+          <div className="space-y-3">
+            <h4 className="hidden sm:block text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>
               Support
             </h4>
-            <ul className="space-y-2 text-xs sm:text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+            <button 
+              onClick={() => toggleMobileSection('support')}
+              className="sm:hidden flex items-center justify-between w-full py-1 text-xs font-bold uppercase tracking-wider border-b border-slate-800" 
+              style={{ color: 'var(--text-primary)' }}
+            >
+              <span>Support</span>
+              {mobileSectionsOpen.support ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            </button>
+            <ul className={`space-y-2 text-xs sm:text-sm font-medium ${mobileSectionsOpen.support ? 'block' : 'hidden sm:block'}`} style={{ color: 'var(--text-muted)' }}>
               <li>
                 <button 
                   onClick={() => { 
@@ -237,17 +342,6 @@ export default function Footer() {
                 </button>
               </li>
               <li>
-                <a
-                  href="/MarketPulse_Final_Technical_Documentation.pdf"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 transition-colors hover:text-blue-600 dark:hover:text-blue-400"
-                >
-                  <FileText size={13} />
-                  <span>Data Guide &amp; Methodology</span>
-                </a>
-              </li>
-              <li>
                 <button 
                   onClick={() => setLegalModal('privacy')} 
                   className="transition-colors hover:text-blue-600 dark:hover:text-blue-400"
@@ -257,7 +351,7 @@ export default function Footer() {
               </li>
               <li>
                 <button 
-                  onClick={() => setLegalModal('terms')} 
+                  onClick={handleNavTermsOfUse} 
                   className="transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                 >
                   Terms of Service
@@ -268,10 +362,18 @@ export default function Footer() {
 
           {/* Column 4: Corporate & Platform Info */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>
+            <h4 className="hidden sm:block text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>
               Corporate Info
             </h4>
-            <div className="space-y-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+            <button 
+              onClick={() => toggleMobileSection('corporate')}
+              className="sm:hidden flex items-center justify-between w-full py-1 text-xs font-bold uppercase tracking-wider border-b border-slate-800" 
+              style={{ color: 'var(--text-primary)' }}
+            >
+              <span>Corporate Info</span>
+              {mobileSectionsOpen.corporate ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            </button>
+            <div className={`space-y-2 text-xs ${mobileSectionsOpen.corporate ? 'block' : 'hidden sm:block'}`} style={{ color: 'var(--text-muted)' }}>
               <p className="font-semibold text-slate-800 dark:text-slate-200">
                 The Lal Street Wealth Managers Pvt. Ltd.
               </p>
@@ -285,7 +387,7 @@ export default function Footer() {
                 <Mail size={12} className="text-red-500 shrink-0" />
                 <a 
                   href="https://mail.google.com/mail/?view=cm&fs=1&to=thelalstreet.04@gmail.com" 
-                  target="_blank"
+                  target="_blank" 
                   rel="noopener noreferrer"
                   className="text-blue-600 dark:text-blue-400 hover:underline"
                   title="Click to email thelalstreet.04@gmail.com"
@@ -321,13 +423,13 @@ export default function Footer() {
 
       {/* ── REGULATORY DISCLAIMER (AFTER FOOTER & ABOVE COPYRIGHT) ── */}
       <div 
-        className="border-t py-6 px-4 md:px-6"
+        className="border-t py-6 px-3 sm:px-4 md:px-6 w-full overflow-hidden"
         style={{ 
           borderColor: 'var(--border-color)', 
           background: 'var(--bg-card)' 
         }}
       >
-        <div className="max-w-[1600px] mx-auto space-y-3">
+        <div className="max-w-[1600px] mx-auto space-y-3 w-full">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-xs uppercase tracking-wider">
               <ShieldAlert size={15} />
@@ -335,14 +437,19 @@ export default function Footer() {
             </div>
             <button
               onClick={() => { navigate('/disclaimer'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+              className="hidden sm:inline-flex text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline items-center gap-1 cursor-pointer"
             >
               <span>Read Full Disclaimer</span>
               <ExternalLink size={12} />
             </button>
           </div>
 
-          <div className="space-y-2 text-[11px] sm:text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+          <div 
+            className={`space-y-2 text-[11px] sm:text-xs leading-relaxed transition-all duration-200 ${
+              mobileDisclaimerExpanded ? '' : 'line-clamp-6 sm:line-clamp-none overflow-hidden'
+            }`} 
+            style={{ color: 'var(--text-muted)' }}
+          >
             <p>
               <strong>The lal Street</strong> is a financial research, analytical intelligence, and market quantitative screening platform operated by <strong>The Lal Street Wealth Managers Pvt. Ltd.</strong> (CIN: U63990CT2025PTC019339). All information, indicators (EMA 20, 50, 200), trendlines, heatmaps, sector breadth statistics, and mutual fund portfolio weightage screeners provided on this platform are strictly for <strong>informational, research, and educational purposes only</strong>. Nothing contained herein constitutes investment, financial, legal, or tax advice, nor is it an endorsement, solicitation, or recommendation to purchase or liquidate any security, derivative, or mutual fund scheme.
             </p>
@@ -353,12 +460,32 @@ export default function Footer() {
               Data is aggregated from official AMFI disclosures, exchange feeds, and public regulatory sources. Market quotes may be delayed by ~15 minutes. For inquiries, grievance redressal, or compliance queries, contact us at <a href="https://mail.google.com/mail/?view=cm&fs=1&to=thelalstreet.04@gmail.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">thelalstreet.04@gmail.com</a> or helpline <a href="tel:+919171516100" className="text-emerald-600 dark:text-emerald-400 hover:underline font-mono">+91 91715 16100</a>.
             </p>
           </div>
+
+          {/* Mobile Read Full Disclaimer / Show Less Toggle Bar */}
+          <div className="sm:hidden pt-1 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setMobileDisclaimerExpanded(prev => !prev)}
+              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer py-0.5"
+            >
+              <span>{mobileDisclaimerExpanded ? 'Show Less' : 'Read Full Disclaimer'}</span>
+              {mobileDisclaimerExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+            <button
+              type="button"
+              onClick={() => { navigate('/disclaimer'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer py-0.5"
+            >
+              <span>Full Page</span>
+              <ExternalLink size={11} />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Lower Bar with Copyright */}
-      <div className="border-t py-4 px-4 md:px-6 text-xs" style={{ borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}>
-        <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-center md:text-left">
+      <div className="border-t py-4 px-3 sm:px-4 md:px-6 text-xs w-full overflow-hidden" style={{ borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}>
+        <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-center md:text-left w-full">
           <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
             <span>
               &copy; 2026 The Lal Street Wealth Managers Pvt. Ltd. All rights reserved.

@@ -106,18 +106,19 @@ function resolveRangeToDates(range) {
   const end = new Date();
   let start = new Date();
 
-  if (typeof range === 'string') {
-    if (range === '1d') start.setDate(start.getDate() - 1);
-    else if (range === '1w') start.setDate(start.getDate() - 7);
-    else if (range === '1mo' || range === '1m') start.setMonth(start.getMonth() - 1);
-    else if (range === '3m') start.setMonth(start.getMonth() - 3);
-    else if (range === '6m') start.setMonth(start.getMonth() - 6);
-    else if (range === '1y' || range === '1yr') start.setFullYear(start.getFullYear() - 1);
-    else if (range === '3y' || range === '3yr') start.setFullYear(start.getFullYear() - 3);
-    else if (range === '5y' || range === '5yr') start.setFullYear(start.getFullYear() - 5);
-    else if (range === 'ytd') start = new Date(start.getFullYear(), 0, 1); // Jan 1 of current year
-    else if (range === 'max' || range === 'all') start = new Date('1970-01-01T00:00:00Z');
-    else if (range === 'fy') { // legacy string 'fy'
+  if (typeof range === "string") {
+    const r = range.toLowerCase();
+    if (r === '1d') start.setDate(start.getDate() - 1);
+    else if (r === '1w') start.setDate(start.getDate() - 7);
+    else if (r === '1mo' || range === '1m') start.setMonth(start.getMonth() - 1);
+    else if (r === '3m') start.setMonth(start.getMonth() - 3);
+    else if (r === '6m') start.setMonth(start.getMonth() - 6);
+    else if (r === '1y' || range === '1yr') start.setFullYear(start.getFullYear() - 1);
+    else if (r === '3y' || range === '3yr') start.setFullYear(start.getFullYear() - 3);
+    else if (r === '5y' || range === '5yr') start.setFullYear(start.getFullYear() - 5);
+    else if (r === 'ytd') start = new Date(start.getFullYear(), 0, 1); // Jan 1 of current year
+    else if (r === 'max' || range === 'all') start = new Date('2000-01-01T00:00:00Z');
+    else if (r === 'fy') { // legacy string 'fy'
        start = getFinancialYearRange(getCurrentFinancialYear()).start;
     }
     else {

@@ -1,4 +1,4 @@
-# MarketPulse — Mutual Fund Stock Weightage Screener
+# The Lal Street — Mutual Fund Stock Weightage Screener
 ## Comprehensive Technical Specification & Architectural Reference
 
 > **Document Version**: 3.0.0 (Production Architecture)  
@@ -11,7 +11,7 @@
 
 ## 1. Executive Summary & Purpose
 
-The **Stock Weightage Screener** in MarketPulse inverts traditional mutual fund analysis: instead of examining one mutual fund at a time to see what it holds, the screener aggregates the institutional mutual fund universe from the **STOCK's perspective**.
+The **Stock Weightage Screener** in The Lal Street inverts traditional mutual fund analysis: instead of examining one mutual fund at a time to see what it holds, the screener aggregates the institutional mutual fund universe from the **STOCK's perspective**.
 
 ### Core Problem It Solves
 Traditional retail mutual fund platforms only provide fund-centric views (e.g., "What does HDFC Top 100 hold?"). Investors and analysts seeking institutional ownership intelligence are left unable to answer critical market-wide questions:
@@ -37,12 +37,12 @@ The Stock Weightage Screener establishes a **bi-directional institutional relati
 
 ---
 
-## 2. System Architecture & Position in MarketPulse
+## 2. System Architecture & Position in The Lal Street
 
 The screener operates as a foundational peer module alongside **Stocks** and **Mutual Funds**, synthesizing data from both domains:
 
 ```
-                          MarketPulse Platform
+                         The Lal Street Platform
                                     │
     ┌───────────────────────────────┼───────────────────────────────┐
     │                               │                               │
@@ -101,7 +101,7 @@ SEBI categorizes mutual fund schemes under standardized mandates. The screener f
 
 ## 5. Dynamic Fund Universe Discovery
 
-MarketPulse dynamically queries the authoritative active fund registry (`backend/data/amfi_active_schemes.json`) on startup. It **never** relies on hardcoded AMC whitelists.
+The Lal Street dynamically queries the authoritative active fund registry (`backend/data/amfi_active_schemes.json`) on startup. It **never** relies on hardcoded AMC whitelists.
 
 ### 5.1 Universe Discovery Algorithm (`isEligibleScreenerFund`)
 ```javascript
@@ -202,7 +202,7 @@ For any individual stock $i$ held across a set of qualifying mutual funds $F_i =
    *Sum of total scheme AUMs of all distinct funds holding stock $i$. Represents the institutional capital pool with direct exposure to the stock.*
 
 > [!IMPORTANT]
-> **Sum of Percentages Distinction**: MarketPulse **never** sums fund-level weight percentages together to claim a "Total Weightage". A fund allocation of 8% in Fund A and 7% in Fund B does not equal "15% total weightage"; it is correctly reported as an average weightage of 7.50% and individual fund-level positions.
+> **Sum of Percentages Distinction**: The Lal Street **never** sums fund-level weight percentages together to claim a "Total Weightage". A fund allocation of 8% in Fund A and 7% in Fund B does not equal "15% total weightage"; it is correctly reported as an average weightage of 7.50% and individual fund-level positions.
 
 ---
 
@@ -270,7 +270,7 @@ The data ingestion pipeline guarantees multi-AMC coverage without mock data:
 
 ## 10. Data Integrity & Zero-Fabrication Standard
 
-MarketPulse enforces an uncompromising **Zero-Fabrication Standard**:
+The Lal Street enforces an uncompromising **Zero-Fabrication Standard**:
 1. **No Synthetic Holdings**: If an AMC has not yet released its statutory portfolio for a scheme, the API returns `holdingsAvailable: false` and `Awaiting publication`. It **never** manufactures random or synthetic stock holdings.
 2. **No Fabricated Fundamentals**: Unavailable prices, weightages, or market caps evaluate strictly to `null` and display as `—`.
 3. **No Phantom AMCs**: AMC names and scheme codes are sourced exclusively from AMFI active registries.
@@ -370,9 +370,9 @@ node tests/test_stock_weightage_api.js
 
 | Item | Path / Location |
 | :--- | :--- |
-| **Main Frontend Page** | [`frontend/src/components/stockWeightage/MutualFundStockWeightageScreener.jsx`](file:///c:/Users/om4ur/Desktop/MarketPulse/MarketPulse/frontend/src/components/stockWeightage/MutualFundStockWeightageScreener.jsx) |
-| **Main Backend Service** | [`backend/services/StockWeightageService.js`](file:///c:/Users/om4ur/Desktop/MarketPulse/MarketPulse/backend/services/StockWeightageService.js) |
-| **Routes Definition** | [`backend/routes/stockWeightage.js`](file:///c:/Users/om4ur/Desktop/MarketPulse/MarketPulse/backend/routes/stockWeightage.js) |
+| **Main Frontend Page** | `frontend/src/components/stockWeightage/MutualFundStockWeightageScreener.jsx` |
+| **Main Backend Service** | `backend/services/StockWeightageService.js` |
+| **Routes Definition** | `backend/routes/stockWeightage.js` |
 | **Active Schemes Registry** | `backend/data/amfi_active_schemes.json` |
 | **Verified Holdings Cache** | `backend/data/verified_fund_holdings_cache.json` |
 | **BSE / ISIN Scrip Mapping**| `backend/data/bse_scrip_mapping.json` |

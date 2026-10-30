@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import { 
   BarChart3, Plus, X, Search, Check, Sparkles, TrendingUp, 
   ShieldAlert, Award, ArrowUpRight, Scale, RefreshCcw, Layers, Info
 } from 'lucide-react';
 import { 
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, 
-  Legend, CartesianGrid, BarChart, Bar, Cell 
+  Legend, CartesianGrid, BarChart, Bar, Cell, ReferenceLine 
 } from 'recharts';
 import MiniRatioIndicator from './MiniRatioIndicator';
 import { useWorkbench } from '../context/WorkbenchContext';
@@ -48,7 +49,58 @@ const PRESETS = [
   }
 ];
 
+// Helper to shorten fund names cleanly for side-by-side comparison tables
+const getShortFundName = (rawName) => {
+  if (!rawName) return '';
+  let name = String(rawName);
+  // Remove verbose corporate plan suffixes
+  name = name.replace(/\s*-\s*open[- ]ended(\s+scheme)?/gi, '');
+  name = name.replace(/\bopen[- ]ended(\s+scheme)?\b/gi, '');
+  name = name.replace(/\(open[- ]ended\)/gi, '');
+  name = name.replace(/\bscheme\s*name\b/gi, '');
+  name = name.replace(/\s*-\s*direct\s+plan\s*-\s*growth(\s+option)?/gi, '');
+  name = name.replace(/\s*-\s*direct\s+plan\s*-\s*growth\s+plan/gi, '');
+  name = name.replace(/\s*-\s*direct\s*-\s*growth/gi, '');
+  name = name.replace(/\s*-\s*direct\s+growth/gi, '');
+  name = name.replace(/\s*-\s*direct\s+plan\s*-\s*$/gi, '');
+  name = name.replace(/\s*-\s*direct\s+plan$/gi, '');
+  name = name.replace(/\s*-\s*growth\s+option$/gi, '');
+  name = name.replace(/\s*-\s*growth\s+plan$/gi, '');
+  name = name.replace(/\s*-\s*growth$/gi, '');
+  name = name.replace(/\s*-\s*direct$/gi, '');
+  name = name.replace(/\bdirect\s+growth\b/gi, '');
+  name = name.replace(/\bdirect\s+plan\b/gi, '');
+  name = name.replace(/\s*-\s*regular\s+plan\s*-\s*growth/gi, '');
+  name = name.replace(/\s*-\s*regular\s+plan$/gi, '');
+  name = name.replace(/\s*-\s*regular$/gi, '');
+  name = name.replace(/\s*-\s*$/, '').trim();
+
+  // Shorten common AMC prefixes
+  name = name.replace(/\bICICI\s+Prudential\b/gi, 'ICICI Pru');
+  name = name.replace(/\bParag\s+Parikh\b/gi, 'PPFAS');
+  name = name.replace(/\bAditya\s+Birla\s+Sun\s+Life\b/gi, 'ABSL');
+  name = name.replace(/\bKotak\s+Mahindra\b/gi, 'Kotak');
+  name = name.replace(/\bFranklin\s+India\b/gi, 'Franklin');
+  name = name.replace(/\bMotilal\s+Oswal\b/gi, 'Motilal');
+  name = name.replace(/\bMirae\s+Asset\b/gi, 'Mirae');
+  name = name.replace(/\bMahindra\s+Manulife\b/gi, 'Mahindra');
+  name = name.replace(/\bBandhan\b/gi, 'Bandhan');
+  name = name.replace(/\bTata\b/gi, 'Tata');
+  name = name.replace(/\bHDFC\b/gi, 'HDFC');
+  name = name.replace(/\bSBI\b/gi, 'SBI');
+  name = name.replace(/\bNippon\s+India\b/gi, 'Nippon');
+
+  // Remove redundant word "Fund" or "Scheme"
+  name = name.replace(/\s+Fund\b/gi, '');
+  name = name.replace(/\s+Scheme\b/gi, '');
+
+  return name.trim() || rawName;
+};
+
 export default function CustomFundComparison({ funds = [], onSelectFundDetail }) {
+  const reduxTheme = useSelector(state => state.market?.theme);
+  const isDark = reduxTheme ? reduxTheme === 'dark' : (typeof document !== 'undefined' && document.documentElement.classList.contains('dark'));
+
   // Select initial 3 funds (Equity, Debt, Hybrid)
   const defaultSelected = useMemo(() => {
     const initialIds = ['118991', '119613', '100045'];
@@ -126,9 +178,13 @@ export default function CustomFundComparison({ funds = [], onSelectFundDetail })
         const tf = metricKey.split('.')[1];
         val = f.returns?.[tf] || 0;
       } else if (metricKey === 'sharpe') {
-        val = f.sharpeRatios?.[activeTimeframe] !== undefined ? f.sharpeRatios[activeTimeframe] : (f.sharpeRatio || 0);
+        val = (f.sharpeRatios?.[activeTimeframe] !== undefined && f.sharpeRatios[activeTimeframe] !== null)
+          ? f.sharpeRatios[activeTimeframe]
+          : (f.riskRatios?.[activeTimeframe]?.sharpe ?? f.sharpeRatio ?? f.sharpeRatio3Y ?? f.riskRatios?.['3Y']?.sharpe ?? f.riskRatios?.['All']?.sharpe ?? f.riskRatios?.['1Y']?.sharpe ?? 0);
       } else if (metricKey === 'sortino') {
-        val = f.sortinoRatios?.[activeTimeframe] !== undefined ? f.sortinoRatios[activeTimeframe] : (f.sortinoRatio || 0);
+        val = (f.sortinoRatios?.[activeTimeframe] !== undefined && f.sortinoRatios[activeTimeframe] !== null)
+          ? f.sortinoRatios[activeTimeframe]
+          : (f.riskRatios?.[activeTimeframe]?.sortino ?? f.sortinoRatio ?? f.sortinoRatio3Y ?? f.riskRatios?.['3Y']?.sortino ?? f.riskRatios?.['All']?.sortino ?? f.riskRatios?.['1Y']?.sortino ?? 0);
       } else if (metricKey === 'aum') {
         val = f.aum || 0;
       }
@@ -141,64 +197,80 @@ export default function CustomFundComparison({ funds = [], onSelectFundDetail })
     return winnerId;
   };
 
-  // Normalized Base-100 Growth Chart Data Generation for selected funds
+  // Normalized Base-10,000 Growth Chart Data Generation for selected funds (Starting strictly at ₹10,000 baseline)
   const growthChartData = useMemo(() => {
     if (selectedFunds.length === 0) return [];
     
-    // Simulate 12 month historical growth points based on 1Y/3Y/5Y performance
-    const points = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const TIMEFRAME_STEPS = {
+      '1M': ['Start', 'W1', 'W2', 'W3', '1M'],
+      '3M': ['Start', 'M1', 'M2', '3M'],
+      '6M': ['Start', 'M2', 'M4', '6M'],
+      '1Y': ['Start', 'Q1', 'Q2', 'Q3', '1Y'],
+      '3Y': ['Start', '1Y', '2Y', '3Y'],
+      '5Y': ['Start', '1Y', '2Y', '3Y', '4Y', '5Y'],
+      'All': ['Start', '3Y', '5Y', 'Incep']
+    };
+
+    const points = TIMEFRAME_STEPS[activeTimeframe] || ['Start', 'Q1', 'Q2', 'Q3', activeTimeframe];
     
     return points.map((month, idx) => {
       const row = { month };
-      const progress = (idx + 1) / 12; // 0.08 to 1.0
+      const progress = idx / (points.length - 1); // 0.0 at Start, 1.0 at End
 
       selectedFunds.forEach((f) => {
-        const tfRet = f.returns?.[activeTimeframe] || 15;
-        // Growth trajectory formula starting from ₹10,000 baseline
-        const noise = Math.sin((idx + 1) * 1.5 + String(f.id).charCodeAt(0)) * 1.8;
-        const GrowthVal = 10000 * (1 + (tfRet / 100) * progress * (0.85 + 0.15 * progress) + noise / 100);
-        row[f.name] = Math.round(GrowthVal);
+        const tfRet = typeof f.returns?.[activeTimeframe] === 'number' 
+          ? f.returns[activeTimeframe] 
+          : (typeof f.oneYearChangePct === 'number' ? f.oneYearChangePct : 15);
+
+        const shortName = getShortFundName(f.name);
+        // Simple, clean normalized trajectory strictly anchored at ₹10,000 baseline
+        if (idx === 0) {
+          row[shortName] = 10000;
+        } else {
+          const growthVal = 10000 * (1 + (tfRet / 100) * progress);
+          row[shortName] = Math.round(growthVal);
+        }
       });
 
       return row;
     });
   }, [selectedFunds, activeTimeframe]);
 
-  // Bar Chart Data comparing 1Y Return, 3Y Return, Sharpe, Sortino side-by-side
+  // Bar Chart Data comparing Return % and Sharpe Ratio side-by-side
   const metricsBarData = useMemo(() => {
     return selectedFunds.map((f, idx) => {
-      const sVal = f.sharpeRatios?.[activeTimeframe] !== undefined ? f.sharpeRatios[activeTimeframe] : (f.sharpeRatio || 0);
-      const sortVal = f.sortinoRatios?.[activeTimeframe] !== undefined ? f.sortinoRatios[activeTimeframe] : (f.sortinoRatio || 0);
-      const retVal = f.returns?.[activeTimeframe] || 0;
+      const sVal = (f.sharpeRatios?.[activeTimeframe] !== undefined && f.sharpeRatios[activeTimeframe] !== null)
+        ? f.sharpeRatios[activeTimeframe]
+        : (f.riskRatios?.[activeTimeframe]?.sharpe ?? f.sharpeRatio ?? f.sharpeRatio3Y ?? f.riskRatios?.['3Y']?.sharpe ?? f.riskRatios?.['All']?.sharpe ?? f.riskRatios?.['1Y']?.sharpe ?? 0);
+      const retVal = Number(f.returns?.[activeTimeframe] || 0);
 
       return {
-        name: f.name.length > 18 ? f.name.substring(0, 18) + '...' : f.name,
+        name: getShortFundName(f.name),
         fullName: f.name,
-        return: retVal,
-        sharpe: sVal,
-        sortino: sortVal,
+        return: parseFloat(retVal.toFixed(1)),
+        sharpe: parseFloat(Number(sVal).toFixed(2)),
         color: COLOR_PALETTE[idx % COLOR_PALETTE.length]
       };
     });
   }, [selectedFunds, activeTimeframe]);
 
   return (
-    <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800/90 rounded-2xl p-5 md:p-6 space-y-6 shadow-sm">
+    <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800/90 rounded-xl md:rounded-2xl p-1.5 sm:p-4 md:p-6 space-y-4 md:space-y-6 shadow-sm w-full">
       {/* Module Title Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 border-b border-slate-200 dark:border-slate-800 pb-3 md:pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20">
-              <Scale size={20} />
+            <div className="p-1.5 sm:p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20">
+              <Scale size={18} className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <h2 className="text-sm sm:text-base md:text-lg font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 sm:gap-2">
                 Custom Fund-wise Comparison
-                <span className="text-[10px] font-extrabold font-mono bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 px-2 py-0.5 rounded-full uppercase">
+                <span className="text-[9px] sm:text-[10px] font-extrabold font-mono bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 px-1.5 sm:px-2 py-0.5 rounded-full uppercase">
                   Cross-Category
                 </span>
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Compare any specific Mutual Funds &amp; ETFs across Equity, Debt, Hybrid, Index, Global &amp; Commodities side-by-side.
               </p>
             </div>
@@ -207,38 +279,38 @@ export default function CustomFundComparison({ funds = [], onSelectFundDetail })
 
         {/* Selected Fund Count Badge & Clear Action */}
         <div className="flex items-center gap-2 self-start md:self-auto">
-          <span className="text-xs font-mono font-bold text-slate-800 dark:text-slate-300 bg-slate-100 dark:bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800">
+          <span className="text-[10px] sm:text-xs font-mono font-bold text-slate-800 dark:text-slate-300 bg-slate-100 dark:bg-slate-950 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-800">
             {selectedFunds.length} / 6 Funds Selected
           </span>
           <button
             onClick={() => setSelectedIds(defaultSelected)}
-            className="p-1.5 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors flex items-center gap-1"
+            className="p-1 sm:p-1.5 text-[10px] sm:text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors flex items-center gap-1"
             title="Reset to default comparison"
           >
-            <RefreshCcw size={13} /> Reset
+            <RefreshCcw size={12} /> Reset
           </button>
         </div>
       </div>
 
       {/* Preset Comparison Quick Buttons */}
-      <div className="space-y-2">
-        <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+      <div className="space-y-1.5 sm:space-y-2">
+        <span className="text-[9px] sm:text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
           Popular Cross-Category Comparison Presets
         </span>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5">
           {PRESETS.map((preset) => (
             <button
               key={preset.id}
               onClick={() => applyPreset(preset)}
-              className="bg-slate-50 dark:bg-slate-950/70 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/40 p-3 rounded-xl text-left transition-all group relative"
+              className="bg-slate-50 dark:bg-slate-950/70 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/40 p-2 sm:p-3 rounded-xl text-left transition-all group relative"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">
+                <span className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">
                   {preset.title}
                 </span>
-                <Sparkles size={12} className="text-indigo-600 dark:text-indigo-400 opacity-60 group-hover:opacity-100" />
+                <Sparkles size={11} className="text-indigo-600 dark:text-indigo-400 opacity-60 group-hover:opacity-100" />
               </div>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-snug truncate">
+              <p className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 leading-snug truncate">
                 {preset.description}
               </p>
             </button>
@@ -247,17 +319,17 @@ export default function CustomFundComparison({ funds = [], onSelectFundDetail })
       </div>
 
       {/* Active Selected Fund Pills Bar & Add Fund Button */}
-      <div className="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-slate-950/80 p-3 rounded-xl border border-slate-200 dark:border-slate-800 relative">
-        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mr-1">Active Schemes:</span>
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 bg-slate-50 dark:bg-slate-950/80 p-2 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 relative">
+        <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mr-1">Active Schemes:</span>
         
         {selectedFunds.map((fund, idx) => (
           <div 
             key={fund.id}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-slate-200 shadow-2xs"
+            className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-slate-200 shadow-2xs"
           >
-            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLOR_PALETTE[idx % COLOR_PALETTE.length] }} />
-            <span className="truncate max-w-[160px]" title={fund.name}>{fund.name}</span>
-            <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-indigo-50 dark:bg-slate-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 uppercase shrink-0">
+            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLOR_PALETTE[idx % COLOR_PALETTE.length] }} />
+            <span className="truncate max-w-[130px] sm:max-w-[150px]" title={fund.name}>{getShortFundName(fund.name)}</span>
+            <span className="text-[8px] sm:text-[9px] font-mono px-1 py-0.2 rounded bg-indigo-50 dark:bg-slate-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 uppercase shrink-0">
               {fund.type}
             </span>
             {selectedIds.length > 1 && (
@@ -266,7 +338,7 @@ export default function CustomFundComparison({ funds = [], onSelectFundDetail })
                 className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-0.5 rounded transition-colors shrink-0"
                 title="Remove fund from comparison"
               >
-                <X size={12} />
+                <X size={11} />
               </button>
             )}
           </div>
@@ -374,7 +446,8 @@ export default function CustomFundComparison({ funds = [], onSelectFundDetail })
           </div>
         </div>
 
-        <div className="overflow-x-auto custom-scrollbar">
+        {/* Desktop View: Full Side-by-Side Table */}
+        <div className="hidden md:block overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[10px]">
@@ -382,30 +455,16 @@ export default function CustomFundComparison({ funds = [], onSelectFundDetail })
                   Metric / Scheme
                 </th>
                 {selectedFunds.map((f, idx) => (
-                  <th key={f.id} className="py-3 px-3 font-semibold text-left min-w-[170px] border-r border-slate-200 dark:border-slate-800/40 last:border-0">
-                    <div className="flex items-center gap-1.5">
+                  <th key={f.id} className="py-3 px-3 font-semibold text-left min-w-[130px] max-w-[160px] border-r border-slate-200 dark:border-slate-800/40 last:border-0">
+                    <div className="flex items-center gap-1.5" title={f.name}>
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLOR_PALETTE[idx % COLOR_PALETTE.length] }} />
-                      <span className="font-bold text-slate-900 dark:text-slate-200 text-xs truncate" title={f.name}>{f.name}</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-200 text-xs truncate">{getShortFundName(f.name)}</span>
                     </div>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800/40 text-xs">
-              {/* Category & Asset Class */}
-              <tr className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
-                <td className="py-2.5 px-3 font-bold text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 sticky left-0 z-10 border-r border-slate-200 dark:border-slate-800 text-[11px]">
-                  Category / Asset Class
-                </td>
-                {selectedFunds.map(f => (
-                  <td key={f.id} className="py-2.5 px-3 border-r border-slate-200 dark:border-slate-800/40 last:border-0">
-                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20">
-                      {f.type} • {f.category}
-                    </span>
-                  </td>
-                ))}
-              </tr>
-
               {/* NAV */}
               <tr className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
                 <td className="py-2.5 px-3 font-bold text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 sticky left-0 z-10 border-r border-slate-200 dark:border-slate-800 text-[11px]">
@@ -494,7 +553,9 @@ export default function CustomFundComparison({ funds = [], onSelectFundDetail })
                   Sharpe Ratio ({activeTimeframe})
                 </td>
                 {selectedFunds.map(f => {
-                  const sVal = f.sharpeRatios?.[activeTimeframe] !== undefined ? f.sharpeRatios[activeTimeframe] : (f.sharpeRatio || 0);
+                  const sVal = (f.sharpeRatios?.[activeTimeframe] !== undefined && f.sharpeRatios[activeTimeframe] !== null)
+                    ? f.sharpeRatios[activeTimeframe]
+                    : (f.riskRatios?.[activeTimeframe]?.sharpe ?? f.sharpeRatio ?? f.sharpeRatio3Y ?? f.riskRatios?.['3Y']?.sharpe ?? f.riskRatios?.['All']?.sharpe ?? f.riskRatios?.['1Y']?.sharpe ?? null);
                   const isWinner = getWinnerForMetric('sharpe') === String(f.id);
                   return (
                     <td key={f.id} className="py-2.5 px-3 border-r border-slate-200 dark:border-slate-800/40 last:border-0">
@@ -513,7 +574,9 @@ export default function CustomFundComparison({ funds = [], onSelectFundDetail })
                   Sortino Ratio ({activeTimeframe})
                 </td>
                 {selectedFunds.map(f => {
-                  const sortVal = f.sortinoRatios?.[activeTimeframe] !== undefined ? f.sortinoRatios[activeTimeframe] : (f.sortinoRatio || 0);
+                  const sortVal = (f.sortinoRatios?.[activeTimeframe] !== undefined && f.sortinoRatios[activeTimeframe] !== null)
+                    ? f.sortinoRatios[activeTimeframe]
+                    : (f.riskRatios?.[activeTimeframe]?.sortino ?? f.sortinoRatio ?? f.sortinoRatio3Y ?? f.riskRatios?.['3Y']?.sortino ?? f.riskRatios?.['All']?.sortino ?? f.riskRatios?.['1Y']?.sortino ?? null);
                   const isWinner = getWinnerForMetric('sortino') === String(f.id);
                   return (
                     <td key={f.id} className="py-2.5 px-3 border-r border-slate-200 dark:border-slate-800/40 last:border-0">
@@ -565,21 +628,254 @@ export default function CustomFundComparison({ funds = [], onSelectFundDetail })
             </tbody>
           </table>
         </div>
+
+        {/* Mobile View: Single Scrollable Comparison Card (Replaces multi-card layout) */}
+        <div className="block md:hidden p-1 sm:p-2 w-full">
+          <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-2xs">
+            {/* Header with scroll guidance */}
+            <div className="px-2.5 py-2 border-b border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-950/60 flex items-center justify-between">
+              <span className="text-[10px] font-extrabold uppercase text-slate-700 dark:text-slate-300 tracking-wider">
+                Fund Comparison Matrix
+              </span>
+              <span className="text-[9px] text-indigo-600 dark:text-indigo-400 font-mono font-bold">
+                ⇄ Swipe sideways ({selectedFunds.length} funds)
+              </span>
+            </div>
+
+            {/* Horizontally scrollable comparison table with sticky left metric names */}
+            <div className="overflow-x-auto scrollbar-thin">
+              <table className="w-full text-left border-collapse text-[10px]">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-950/80">
+                    <th className="py-2 px-2.5 font-bold text-slate-500 dark:text-slate-400 sticky left-0 z-10 bg-slate-100 dark:bg-slate-950 min-w-[95px] border-r border-slate-200 dark:border-slate-800">
+                      Metric
+                    </th>
+                    {selectedFunds.map((f, idx) => (
+                      <th key={f.id} className="py-2 px-2 min-w-[100px] max-w-[120px] border-r border-slate-200 dark:border-slate-800/60 last:border-0 align-top">
+                        <div className="flex items-center gap-1" title={f.name}>
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLOR_PALETTE[idx % COLOR_PALETTE.length] }} />
+                          <span className="font-bold text-[9.5px] text-slate-900 dark:text-slate-100 truncate">
+                            {getShortFundName(f.name)}
+                          </span>
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                  {/* NAV */}
+                  <tr>
+                    <td className="py-1.5 px-2.5 font-bold text-slate-500 dark:text-slate-400 sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+                      Current NAV
+                    </td>
+                    {selectedFunds.map(f => (
+                      <td key={f.id} className="py-1.5 px-2.5 font-mono font-bold text-slate-900 dark:text-slate-100 border-r border-slate-100 dark:border-slate-800/50 last:border-0">
+                        {f.nav != null ? `₹${Number(f.nav).toFixed(2)}` : '—'}
+                      </td>
+                    ))}
+                  </tr>
+
+                  {/* AUM */}
+                  <tr>
+                    <td className="py-1.5 px-2.5 font-bold text-slate-500 dark:text-slate-400 sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+                      Fund AUM
+                    </td>
+                    {selectedFunds.map(f => {
+                      const isWinner = getWinnerForMetric('aum') === String(f.id);
+                      return (
+                        <td key={f.id} className="py-1.5 px-2.5 font-mono font-bold text-slate-800 dark:text-slate-200 border-r border-slate-100 dark:border-slate-800/50 last:border-0">
+                          <span>{f.aum != null ? `₹${Math.round(Number(f.aum)).toLocaleString('en-IN')} Cr` : '—'}</span>
+                          {isWinner && <span className="ml-1 text-[8.5px] text-amber-500 font-extrabold">★</span>}
+                        </td>
+                      );
+                    })}
+                  </tr>
+
+                  {/* 1Y Return */}
+                  <tr>
+                    <td className="py-1.5 px-2.5 font-bold text-slate-500 dark:text-slate-400 sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+                      1Y Return
+                    </td>
+                    {selectedFunds.map(f => {
+                      const ret1Y = Number(f.returns?.['1Y'] || 0);
+                      const isWinner = getWinnerForMetric('returns.1Y') === String(f.id);
+                      return (
+                        <td key={f.id} className="py-1.5 px-2.5 font-mono font-bold border-r border-slate-100 dark:border-slate-800/50 last:border-0">
+                          <span className={ret1Y >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}>
+                            {ret1Y >= 0 ? '+' : ''}{ret1Y.toFixed(1)}% {isWinner && '🏆'}
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+
+                  {/* 3Y Return */}
+                  <tr>
+                    <td className="py-1.5 px-2.5 font-bold text-slate-500 dark:text-slate-400 sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+                      3Y CAGR
+                    </td>
+                    {selectedFunds.map(f => {
+                      const ret3Y = Number(f.returns?.['3Y'] || 0);
+                      const isWinner = getWinnerForMetric('returns.3Y') === String(f.id);
+                      return (
+                        <td key={f.id} className="py-1.5 px-2.5 font-mono font-bold border-r border-slate-100 dark:border-slate-800/50 last:border-0">
+                          <span className={ret3Y >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}>
+                            {ret3Y >= 0 ? '+' : ''}{ret3Y.toFixed(1)}% {isWinner && '🏆'}
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+
+                  {/* 5Y Return */}
+                  <tr>
+                    <td className="py-1.5 px-2.5 font-bold text-slate-500 dark:text-slate-400 sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+                      5Y CAGR
+                    </td>
+                    {selectedFunds.map(f => {
+                      const ret5Y = Number(f.returns?.['5Y'] || 0);
+                      const isWinner = getWinnerForMetric('returns.5Y') === String(f.id);
+                      return (
+                        <td key={f.id} className="py-1.5 px-2.5 font-mono font-bold border-r border-slate-100 dark:border-slate-800/50 last:border-0">
+                          <span className={ret5Y >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}>
+                            {ret5Y >= 0 ? '+' : ''}{ret5Y.toFixed(1)}% {isWinner && '🏆'}
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+
+                  {/* Sharpe Ratio */}
+                  <tr>
+                    <td className="py-1.5 px-2.5 font-bold text-slate-500 dark:text-slate-400 sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+                      Sharpe ({activeTimeframe})
+                    </td>
+                    {selectedFunds.map(f => {
+                      const s = f.sharpeRatios?.[activeTimeframe] ?? f.riskRatios?.[activeTimeframe]?.sharpe ?? f.sharpeRatio ?? f.sharpeRatio3Y;
+                      return (
+                        <td key={f.id} className="py-1.5 px-2.5 font-mono font-bold text-blue-600 dark:text-blue-400 border-r border-slate-100 dark:border-slate-800/50 last:border-0">
+                          {s != null ? Number(s).toFixed(2) : '—'}
+                        </td>
+                      );
+                    })}
+                  </tr>
+
+                  {/* Sortino Ratio */}
+                  <tr>
+                    <td className="py-1.5 px-2.5 font-bold text-slate-500 dark:text-slate-400 sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+                      Sortino
+                    </td>
+                    {selectedFunds.map(f => {
+                      const s = f.sortinoRatios?.[activeTimeframe] ?? f.riskRatios?.[activeTimeframe]?.sortino ?? f.sortinoRatio ?? f.sortinoRatio3Y;
+                      return (
+                        <td key={f.id} className="py-1.5 px-2.5 font-mono font-bold text-purple-600 dark:text-purple-400 border-r border-slate-100 dark:border-slate-800/50 last:border-0">
+                          {s != null ? Number(s).toFixed(2) : '—'}
+                        </td>
+                      );
+                    })}
+                  </tr>
+
+                  {/* Expense Ratio */}
+                  <tr>
+                    <td className="py-1.5 px-2.5 font-bold text-slate-500 dark:text-slate-400 sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+                      Expense Ratio
+                    </td>
+                    {selectedFunds.map(f => (
+                      <td key={f.id} className="py-1.5 px-2.5 font-mono font-bold text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-slate-800/50 last:border-0">
+                        {f.expenseRatio != null ? `${Number(f.expenseRatio).toFixed(2)}%` : '—'}
+                      </td>
+                    ))}
+                  </tr>
+
+                  {/* Risk Level */}
+                  <tr>
+                    <td className="py-1.5 px-2.5 font-bold text-slate-500 dark:text-slate-400 sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+                      Risk Level
+                    </td>
+                    {selectedFunds.map(f => (
+                      <td key={f.id} className="py-1.5 px-2.5 font-semibold text-[9px] text-amber-600 dark:text-amber-400 border-r border-slate-100 dark:border-slate-800/50 last:border-0 truncate">
+                        {f.risk || 'Very High'}
+                      </td>
+                    ))}
+                  </tr>
+
+                  {/* Action Button */}
+                  {onSelectFundDetail && (
+                    <tr>
+                      <td className="py-2 px-2.5 font-bold text-slate-500 dark:text-slate-400 sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+                        Detail
+                      </td>
+                      {selectedFunds.map(f => (
+                        <td key={f.id} className="py-2 px-2.5 border-r border-slate-100 dark:border-slate-800/50 last:border-0">
+                          <button
+                            onClick={() => onSelectFundDetail(f)}
+                            className="px-2 py-1 rounded text-[9.5px] font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors whitespace-nowrap"
+                          >
+                            Details
+                          </button>
+                        </td>
+                      ))}
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── 2. VISUAL CHARTS SECTION: NORMALIZED RETURN OVERLAY & BAR COMPARISON ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
         {/* Normalized Growth Overlay Chart (Left 7 Cols) */}
-        <div className="lg:col-span-7 bg-white dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3 shadow-2xs">
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5">
+        <div className="lg:col-span-7 bg-white dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 rounded-xl p-3 sm:p-4 space-y-3 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2.5">
             <div>
               <h3 className="text-xs font-extrabold text-slate-900 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
                 <TrendingUp size={14} className="text-indigo-600 dark:text-indigo-400" />
                 Normalized Growth Trajectory Overlay (Baseline ₹10,000)
               </h3>
               <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Comparing ₹10k growth performance trajectory over {activeTimeframe} across selected cross-category funds.
+                Comparing ₹10k growth performance trajectory over {activeTimeframe} across selected schemes.
               </p>
+            </div>
+
+            {/* Timeframe Selector directly on the Growth Chart */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800 self-start sm:self-auto shrink-0">
+              {['1M', '3M', '6M', '1Y', '3Y', '5Y', 'All'].map(tf => (
+                <button
+                  key={tf}
+                  onClick={() => setActiveTimeframe(tf)}
+                  className={`px-2 py-0.5 text-[9.5px] font-bold rounded transition-colors ${
+                    activeTimeframe === tf 
+                      ? 'bg-indigo-600 text-white shadow-2xs' 
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Simple & Clear ₹10,000 Growth Explanation Strip */}
+          <div className="bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 rounded-lg p-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-[10.5px]">
+            <div className="flex items-center gap-1.5 text-indigo-900 dark:text-indigo-200 font-medium">
+              <Info size={13} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <span>₹10,000 invested grew to over <strong>{activeTimeframe}</strong>:</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {selectedFunds.map((f, idx) => {
+                const tfRet = typeof f.returns?.[activeTimeframe] === 'number' 
+                  ? f.returns[activeTimeframe] 
+                  : (typeof f.oneYearChangePct === 'number' ? f.oneYearChangePct : 15);
+                const endVal = Math.round(10000 * (1 + tfRet / 100));
+                return (
+                  <span key={f.id} className="font-mono text-[9.5px] font-bold text-slate-800 dark:text-slate-200" title={f.name}>
+                    <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: COLOR_PALETTE[idx % COLOR_PALETTE.length] }} />
+                    {getShortFundName(f.name)}: ₹{endVal.toLocaleString('en-IN')} <span className={tfRet >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600'}>({tfRet >= 0 ? '+' : ''}{tfRet.toFixed(1)}%)</span>
+                  </span>
+                );
+              })}
             </div>
           </div>
 
@@ -588,9 +884,17 @@ export default function CustomFundComparison({ funds = [], onSelectFundDetail })
               <LineChart data={growthChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="month" stroke="#64748b" fontSize={10} tickLine={false} />
-                <YAxis stroke="#64748b" fontSize={10} tickLine={false} tickFormatter={v => `₹${(v/1000).toFixed(1)}k`} />
+                <YAxis stroke="#64748b" fontSize={10} tickLine={false} domain={['auto', 'auto']} tickFormatter={v => `₹${(v/1000).toFixed(1)}k`} />
+                <ReferenceLine y={10000} stroke="#94a3b8" strokeDasharray="3 3" label={{ value: 'Baseline ₹10k', fill: '#94a3b8', fontSize: 9, position: 'insideBottomRight' }} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', color: '#0f172a', borderRadius: '8px', fontSize: '11px' }}
+                  contentStyle={{ 
+                    backgroundColor: isDark ? '#1e293b' : '#ffffff', 
+                    borderColor: isDark ? '#334155' : '#e2e8f0', 
+                    color: isDark ? '#f8fafc' : '#0f172a', 
+                    borderRadius: '8px', 
+                    fontSize: '11px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                  }}
                   formatter={(val, name) => [`₹${val != null ? Number(val).toLocaleString() : '0'}`, name]}
                 />
                 <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '8px' }} />
@@ -598,7 +902,7 @@ export default function CustomFundComparison({ funds = [], onSelectFundDetail })
                   <Line 
                     key={f.id} 
                     type="monotone" 
-                    dataKey={f.name} 
+                    dataKey={getShortFundName(f.name)} 
                     stroke={COLOR_PALETTE[idx % COLOR_PALETTE.length]} 
                     strokeWidth={2}
                     dot={false}
@@ -610,7 +914,7 @@ export default function CustomFundComparison({ funds = [], onSelectFundDetail })
         </div>
 
         {/* Risk & Return Bar Comparison (Right 5 Cols) */}
-        <div className="lg:col-span-5 bg-white dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3 shadow-2xs">
+        <div className="lg:col-span-5 bg-white dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 rounded-xl p-3 sm:p-4 space-y-3 shadow-2xs">
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5">
             <div>
               <h3 className="text-xs font-extrabold text-slate-900 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
@@ -618,27 +922,41 @@ export default function CustomFundComparison({ funds = [], onSelectFundDetail })
                 Return vs Risk Ratio Comparison ({activeTimeframe})
               </h3>
               <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Visualizing {activeTimeframe} Return % vs Risk-adjusted Sharpe ratio across selected schemes.
+                Comparing {activeTimeframe} Return % and Sharpe Ratio side-by-side.
               </p>
             </div>
           </div>
 
+          {/* Educational Insight Banner */}
+          <div className="bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-lg p-2 text-[10.5px] text-emerald-900 dark:text-emerald-200 font-medium flex items-center gap-1.5">
+            <Award size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span><strong>Higher Return + Higher Sharpe Ratio</strong> = Superior risk-adjusted returns per unit of volatility.</span>
+          </div>
+
           <div className="h-64 w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={metricsBarData} margin={{ top: 10, right: 10, left: -15, bottom: 25 }}>
+              <BarChart data={metricsBarData} margin={{ top: 10, right: 15, left: -15, bottom: 25 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="name" stroke="#64748b" fontSize={9} angle={-15} textAnchor="end" interval={0} />
-                <YAxis stroke="#64748b" fontSize={10} tickLine={false} />
+                <YAxis yAxisId="left" stroke="#10b981" fontSize={10} tickLine={false} tickFormatter={v => `${v}%`} />
+                <YAxis yAxisId="right" orientation="right" stroke="#6366f1" fontSize={10} tickLine={false} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', color: '#0f172a', borderRadius: '8px', fontSize: '11px' }}
-                  formatter={(val, name) => [name === 'return' ? `+${val}%` : val, name === 'return' ? `${activeTimeframe} Return` : name === 'sharpe' ? 'Sharpe Ratio' : 'Sortino Ratio']}
+                  contentStyle={{ 
+                    backgroundColor: isDark ? '#1e293b' : '#ffffff', 
+                    borderColor: isDark ? '#334155' : '#e2e8f0', 
+                    color: isDark ? '#f8fafc' : '#0f172a', 
+                    borderRadius: '8px', 
+                    fontSize: '11px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                  }}
+                  formatter={(val, name) => [
+                    name === `${activeTimeframe} Return %` ? `${Number(val) >= 0 ? '+' : ''}${val}%` : Number(val).toFixed(2), 
+                    name
+                  ]}
                 />
                 <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '4px' }} />
-                <Bar dataKey="return" name={`${activeTimeframe} Return %`} radius={[4, 4, 0, 0]}>
-                  {metricsBarData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
+                <Bar yAxisId="left" dataKey="return" name={`${activeTimeframe} Return %`} fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="right" dataKey="sharpe" name="Sharpe Ratio" fill="#6366f1" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

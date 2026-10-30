@@ -9,13 +9,24 @@ class FundAnalysisEngine {
    * Run the full analysis pipeline on a fund
    */
   async analyzeFund(fundProfile, navHistoryArray, region = 'india') {
+    const history = Array.isArray(navHistoryArray) ? navHistoryArray : [];
+    if (history.length === 0) {
+      return {
+        returns: {},
+        cagr: {},
+        risk: { stdDev: null, maxDrawdown: null, beta: null, alpha: null, sharpe: null, sortino: null },
+        benchmark: region === 'india' ? 'Nifty 50 TRI' : 'S&P 500',
+        available: false
+      };
+    }
+
     // 1. NAV Analysis & Returns
-    const returnsArray = this._calculatePeriodicReturns(navHistoryArray);
-    const cagrStats = this._calculateCAGR(navHistoryArray);
+    const returnsArray = this._calculatePeriodicReturns(history);
+    const cagrStats = this._calculateCAGR(history);
     
     // 2. Risk Metrics & Math
     const stdDev = financialMath.calculateStandardDeviation(returnsArray);
-    const maxDrawdown = financialMath.calculateMaxDrawdown(navHistoryArray.map(d => d.value));
+    const maxDrawdown = financialMath.calculateMaxDrawdown(history.map(d => d.value));
     
     // Fetch benchmark for Alpha/Beta
     const benchmarkSymbol = region === 'india' ? '^NSEI' : '^GSPC';
@@ -43,6 +54,9 @@ class FundAnalysisEngine {
       console.warn('Failed to load full NAVs for advanced analysis, using parameters:', e.message);
     }
 
+    const riskMetrics1Y = typeof riskAnalyticsService.getRiskMetrics1YMonthly === 'function'
+      ? riskAnalyticsService.getRiskMetrics1YMonthly(fullNavs, benchmarkData.returns || [], rfVal, fundProfile || {})
+      : { sharpeRatio: null, sortinoRatio: null, status: 'UNAVAILABLE' };
     const riskMetrics3Y = riskAnalyticsService.getRiskMetrics3YMonthly(fullNavs, benchmarkData.returns || [], rfVal, fundProfile || {});
     const riskMetrics5Y = riskAnalyticsService.getRiskMetrics5YMonthly(fullNavs, benchmarkData.returns || [], rfVal, fundProfile || {});
     const riskMetricsIncep = riskAnalyticsService.getRiskMetricsSinceInception(fullNavs, benchmarkData.returns || [], rfVal, fundProfile || {});
@@ -97,6 +111,12 @@ class FundAnalysisEngine {
         standardDeviation: typeof stdDev === 'number' ? stdDev.toFixed(2) : null,
         maxDrawdown: typeof maxDrawdown === 'number' ? maxDrawdown.toFixed(2) : null,
         timeframes: {
+          '1Y': {
+            sharpeRatio: riskMetrics1Y.sharpeRatio,
+            sortinoRatio: riskMetrics1Y.sortinoRatio,
+            status: riskMetrics1Y.status,
+            reason: riskMetrics1Y.reason
+          },
           '3Y': {
             sharpeRatio: riskMetrics3Y.sharpeRatio,
             sortinoRatio: riskMetrics3Y.sortinoRatio,

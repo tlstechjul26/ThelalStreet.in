@@ -138,6 +138,31 @@ router.get('/:type/:id/detail', async (req, res) => {
       try {
         const advancedAnalysis = await fundAnalysisEngine.analyzeFund(detail, detail.history, region);
         detail.advancedAnalysis = advancedAnalysis;
+        if (advancedAnalysis?.performance) {
+          const perf = advancedAnalysis.performance;
+          const rootSharpe = perf.sharpeRatio != null ? parseFloat(Number(perf.sharpeRatio).toFixed(2)) : (detail.sharpeRatio ?? null);
+          const rootSortino = perf.sortinoRatio != null ? parseFloat(Number(perf.sortinoRatio).toFixed(2)) : (detail.sortinoRatio ?? null);
+          detail.sharpeRatio = rootSharpe;
+          detail.sortinoRatio = rootSortino;
+          detail.riskRatios = {
+            '1Y': {
+              sharpe: perf.timeframes?.['1Y']?.sharpeRatio != null ? parseFloat(Number(perf.timeframes['1Y'].sharpeRatio).toFixed(2)) : rootSharpe,
+              sortino: perf.timeframes?.['1Y']?.sortinoRatio != null ? parseFloat(Number(perf.timeframes['1Y'].sortinoRatio).toFixed(2)) : rootSortino
+            },
+            '3Y': {
+              sharpe: perf.timeframes?.['3Y']?.sharpeRatio != null ? parseFloat(Number(perf.timeframes['3Y'].sharpeRatio).toFixed(2)) : rootSharpe,
+              sortino: perf.timeframes?.['3Y']?.sortinoRatio != null ? parseFloat(Number(perf.timeframes['3Y'].sortinoRatio).toFixed(2)) : rootSortino
+            },
+            '5Y': {
+              sharpe: perf.timeframes?.['5Y']?.sharpeRatio != null ? parseFloat(Number(perf.timeframes['5Y'].sharpeRatio).toFixed(2)) : rootSharpe,
+              sortino: perf.timeframes?.['5Y']?.sortinoRatio != null ? parseFloat(Number(perf.timeframes['5Y'].sortinoRatio).toFixed(2)) : rootSortino
+            },
+            'All': {
+              sharpe: perf.timeframes?.['All']?.sharpeRatio != null ? parseFloat(Number(perf.timeframes['All'].sharpeRatio).toFixed(2)) : rootSharpe,
+              sortino: perf.timeframes?.['All']?.sortinoRatio != null ? parseFloat(Number(perf.timeframes['All'].sortinoRatio).toFixed(2)) : rootSortino
+            }
+          };
+        }
       } catch (e) {
         console.warn('Advanced analysis failed for', id, e.message);
       }

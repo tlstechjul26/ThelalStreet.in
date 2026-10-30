@@ -497,7 +497,7 @@ export default function HowToUseModal({ isOpen, onClose }) {
         {/* Modal Footer */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-3.5 border-t text-xs" style={{ borderColor: 'var(--border-color)', background: 'var(--bg-secondary)' }}>
           <a
-            href="/MarketPulse_Final_Technical_Documentation.pdf"
+            href="/The_Lal_Street_Data_Guide_and_Methodology.pdf"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-medium hover:underline"

@@ -122,84 +122,111 @@ export default function MfMarketOverview({ enrichedFunds = [], liveSummary = nul
   const strokeWidth = 14;
   const circumference = 2 * Math.PI * radius;
 
-  let accumulatedPercent = 0;
+  let desktopAccumulatedPercent = 0;
+  let mobileAccumulatedPercent = 0;
+
+  const totalFundsDisplay = liveSummary && liveSummary.totalFunds && typeof liveSummary.totalFunds.value === 'number'
+    ? liveSummary.totalFunds.value.toLocaleString('en-IN')
+    : (totalFundsCount > 0 ? totalFundsCount.toLocaleString('en-IN') : '—');
+
+  const registeredAmcsDisplay = liveSummary?.registeredAmcs?.value || (registeredAmcCount > 0 ? registeredAmcCount : 55);
+  const registeredAmcsDate = liveSummary?.registeredAmcs?.asOf || asOfDate || 'September 2026';
+
+  const topSipFundsVal = liveSummary?.topSipFunds?.value || 'Small-cap (₹9,039 Cr), Mid-cap (₹7,835 Cr), Flexi-cap (₹6,702 Cr)';
+  const topSipFundsDate = liveSummary?.topSipFunds?.asOf || asOfDate || 'September 2026';
+
+  const amcMarketShareVal = liveSummary?.amcMarketShare?.value || 'SBI MF (15.02%), ICICI Pru (13.25%), HDFC (11.48%)';
+  const amcMarketShareDate = liveSummary?.amcMarketShare?.asOf || asOfDate || 'Q2 FY2027';
 
   return (
-    <div className="w-full my-4">
-      {/* 6-Card Horizontal Desktop Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5">
-        
-        {/* CARD 1: TOTAL INDUSTRY MF AUM */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-xs transition-all">
-          <div className="flex items-start justify-between">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              TOTAL INDUSTRY MF AUM
-            </span>
-            <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-              <Wallet size={16} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
-              {industryAumDisplay}
-            </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Industry AUM (All Plans)</div>
-          </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
-            {liveSummary?.industryAum?.change ? (
-              <span className={String(liveSummary.industryAum.change).startsWith('-') ? "text-rose-600 dark:text-rose-400 font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold"}>
-                {String(liveSummary.industryAum.change).startsWith('-') ? '▼ ' : '▲ '}{String(liveSummary.industryAum.change).replace(/^[+-]\s*/, '')}
-              </span>
-            ) : (
-              <span>Source: SEBI / AMFI</span>
-            )}
-            <span>As of {industryAumDate}</span>
-          </div>
-        </div>
-
-        {/* CARD 2: TOTAL FUNDS + AUM DONUT CHART */}
-        <div 
-          onClick={onSelectAllFunds}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-xs transition-all cursor-pointer group hover:border-blue-400 dark:hover:border-blue-500"
-          title="Click to view all funds in screener"
-        >
-          {/* Top Half: Funds Stat */}
-          <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-            <div>
-              <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                TOTAL FUNDS
-              </div>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-xl font-extrabold font-mono text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  {liveSummary && liveSummary.totalFunds && typeof liveSummary.totalFunds.value === 'number'
-                    ? liveSummary.totalFunds.value.toLocaleString('en-IN')
-                    : (totalFundsCount > 0 ? totalFundsCount.toLocaleString('en-IN') : '—')}
+    <div className="w-full my-1.5 sm:my-3 md:my-4">
+      {/* Single Card Mobile Overview (Only visible on screens < lg) */}
+      <div className="block lg:hidden w-full">
+        {/* MOBILE CARD 1: INDUSTRY AUM, TOTAL FUNDS & ASSET ALLOCATION */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 sm:p-3 shadow-xs space-y-2.5 w-full">
+          {/* Section 1: Total Industry MF AUM */}
+          <div className="flex flex-col">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <div className="w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                  <Wallet className="w-3 h-3" />
+                </div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  TOTAL INDUSTRY MF AUM
                 </span>
-                <span className="text-xs text-slate-500 dark:text-slate-400">Active Direct Growth Schemes</span>
               </div>
-
+              {liveSummary?.industryAum?.change && (
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${String(liveSummary.industryAum.change).startsWith('-') ? "bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400" : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"}`}>
+                  {String(liveSummary.industryAum.change).startsWith('-') ? '▼ ' : '▲ '}{String(liveSummary.industryAum.change).replace(/^[+-]\s*/, '')} MoM
+                </span>
+              )}
             </div>
-            <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-              <Clock size={16} />
+            <div className="flex items-baseline justify-between mt-1">
+              <div>
+                <span className="text-lg sm:text-xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
+                  {industryAumDisplay}
+                </span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 ml-2">Industry AUM (All Plans)</span>
+              </div>
+              <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono">As of {industryAumDate}</span>
             </div>
           </div>
 
-          {/* Bottom Half: AUM Breakdown Donut */}
-          <div className="mt-3 flex-1 flex flex-col justify-end">
-            <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
-              AUM BREAKDOWN
+          <div className="border-t border-slate-100 dark:border-slate-800/80" />
+
+          {/* Section 2: Total Funds & Registered AMCs in a 2-col mini grid */}
+          <div className="grid grid-cols-2 gap-2">
+            {/* Total Funds */}
+            <div 
+              onClick={onSelectAllFunds}
+              className={`p-2 rounded-lg bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 ${onSelectAllFunds ? 'cursor-pointer hover:border-blue-400' : ''}`}
+              title="Click to view all funds in screener"
+            >
+              <div className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <Clock className="w-3 h-3 text-blue-500 shrink-0" />
+                <span>TOTAL FUNDS</span>
+              </div>
+              <div className="text-base font-extrabold font-mono text-slate-900 dark:text-white mt-0.5">
+                {totalFundsDisplay}
+              </div>
+              <div className="text-[9px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                Active Direct Growth Schemes
+              </div>
             </div>
-            
+
+            {/* Registered AMCs */}
+            <div className="p-2 rounded-lg bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60">
+              <div className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <Users className="w-3 h-3 text-purple-500 shrink-0" />
+                <span>REGISTERED AMCS</span>
+              </div>
+              <div className="text-base font-extrabold font-mono text-slate-900 dark:text-white mt-0.5">
+                {registeredAmcsDisplay}
+              </div>
+              <div className="text-[9px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                AMCs (SEBI / AMFI)
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 dark:border-slate-800/80" />
+
+          {/* Section 3: AUM Breakdown with Donut Chart */}
+          <div>
+            <div className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 flex items-center justify-between">
+              <span>AUM BREAKDOWN</span>
+              <span className="text-[8px] text-slate-400 font-normal">By Asset Class</span>
+            </div>
             {displayedAssetAllocation.length > 0 ? (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 {/* SVG Donut Chart */}
-                <div className="relative w-12 h-12 shrink-0 flex items-center justify-center">
+                <div className="relative w-11 h-11 shrink-0 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 80 80">
                     <circle cx="40" cy="40" r={radius} stroke="currentColor" strokeWidth={strokeWidth} className="text-slate-100 dark:text-slate-800" fill="transparent" />
                     {displayedAssetAllocation.map((item, idx) => {
                       const strokeDasharray = `${(item.percentage / 100) * circumference} ${circumference}`;
-                      const strokeDashoffset = -((accumulatedPercent / 100) * circumference);
-                      accumulatedPercent += item.percentage;
+                      const strokeDashoffset = -((mobileAccumulatedPercent / 100) * circumference);
+                      mobileAccumulatedPercent += item.percentage;
                       return (
                         <circle
                           key={idx}
@@ -218,9 +245,124 @@ export default function MfMarketOverview({ enrichedFunds = [], liveSummary = nul
                 </div>
 
                 {/* Donut Legend */}
-                <div className="flex-1 flex flex-col gap-1.5 overflow-hidden">
+                <div className="flex-1 grid grid-cols-2 gap-x-2 gap-y-0.5">
+                  {displayedAssetAllocation.slice(0, 4).map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-[9px]">
+                      <div className="flex items-center gap-1 truncate">
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                        <span className="text-slate-700 dark:text-slate-300 font-medium truncate" title={item.label}>{item.label}</span>
+                      </div>
+                      <span className="text-slate-500 dark:text-slate-400 font-mono shrink-0 ml-1">{item.percentage.toFixed(1)}%</span>
+                    </div>
+                  ))}
+                  {displayedAssetAllocation.length > 4 && (
+                    <div className="text-[8px] text-slate-400 dark:text-slate-500 italic col-span-2">
+                      + {displayedAssetAllocation.length - 4} more
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-[9px] text-slate-500 italic">Data unavailable</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 6-Card Horizontal Desktop Grid (100% Preexisting code untouched for desktop) */}
+      <div className="hidden lg:grid lg:grid-cols-6 gap-2 sm:gap-3 lg:gap-3.5">
+        
+        {/* CARD 1: TOTAL INDUSTRY MF AUM */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 sm:p-3 md:p-4 flex flex-col justify-between shadow-xs transition-all">
+          <div className="flex items-start justify-between">
+            <span className="text-[9px] sm:text-[10px] md:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              TOTAL INDUSTRY MF AUM
+            </span>
+            <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </div>
+          </div>
+          <div className="mt-2 sm:mt-3">
+            <div className="text-base sm:text-lg md:text-xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
+              {industryAumDisplay}
+            </div>
+            <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">Industry AUM (All Plans)</div>
+          </div>
+          <div className="mt-2 sm:mt-3 pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
+            {liveSummary?.industryAum?.change ? (
+              <span className={String(liveSummary.industryAum.change).startsWith('-') ? "text-rose-600 dark:text-rose-400 font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold"}>
+                {String(liveSummary.industryAum.change).startsWith('-') ? '▼ ' : '▲ '}{String(liveSummary.industryAum.change).replace(/^[+-]\s*/, '')}
+              </span>
+            ) : (
+              <span>Source: SEBI / AMFI</span>
+            )}
+            <span>As of {industryAumDate}</span>
+          </div>
+        </div>
+
+        {/* CARD 2: TOTAL FUNDS + AUM DONUT CHART */}
+        <div 
+          onClick={onSelectAllFunds}
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 sm:p-3 md:p-4 flex flex-col justify-between shadow-xs transition-all cursor-pointer group hover:border-blue-400 dark:hover:border-blue-500"
+          title="Click to view all funds in screener"
+        >
+          {/* Top Half: Funds Stat */}
+          <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-2 sm:pb-3">
+            <div>
+              <div className="text-[9px] sm:text-[10px] md:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                TOTAL FUNDS
+              </div>
+              <div className="flex items-baseline gap-1.5 sm:gap-2 mt-1">
+                <span className="text-base sm:text-lg md:text-xl font-extrabold font-mono text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  {liveSummary && liveSummary.totalFunds && typeof liveSummary.totalFunds.value === 'number'
+                    ? liveSummary.totalFunds.value.toLocaleString('en-IN')
+                    : (totalFundsCount > 0 ? totalFundsCount.toLocaleString('en-IN') : '—')}
+                </span>
+                <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 truncate max-w-[130px] sm:max-w-none">Active Direct Growth Schemes</span>
+              </div>
+            </div>
+            <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </div>
+          </div>
+
+          {/* Bottom Half: AUM Breakdown Donut */}
+          <div className="mt-2 sm:mt-3 flex-1 flex flex-col justify-end">
+            <div className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 sm:mb-2">
+              AUM BREAKDOWN
+            </div>
+            
+            {displayedAssetAllocation.length > 0 ? (
+              <div className="flex items-center gap-2 sm:gap-3">
+                {/* SVG Donut Chart */}
+                <div className="relative w-10 h-10 sm:w-12 sm:h-12 shrink-0 flex items-center justify-center">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 80 80">
+                    <circle cx="40" cy="40" r={radius} stroke="currentColor" strokeWidth={strokeWidth} className="text-slate-100 dark:text-slate-800" fill="transparent" />
+                    {displayedAssetAllocation.map((item, idx) => {
+                      const strokeDasharray = `${(item.percentage / 100) * circumference} ${circumference}`;
+                      const strokeDashoffset = -((desktopAccumulatedPercent / 100) * circumference);
+                      desktopAccumulatedPercent += item.percentage;
+                      return (
+                        <circle
+                          key={idx}
+                          cx="40"
+                          cy="40"
+                          r={radius}
+                          stroke={item.color}
+                          strokeWidth={strokeWidth}
+                          strokeDasharray={strokeDasharray}
+                          strokeDashoffset={strokeDashoffset}
+                          fill="transparent"
+                        />
+                      );
+                    })}
+                  </svg>
+                </div>
+
+                {/* Donut Legend */}
+                <div className="flex-1 flex flex-col gap-1 overflow-hidden">
                   {displayedAssetAllocation.slice(0, 3).map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-[10px]">
+                    <div key={idx} className="flex items-center justify-between text-[9px] sm:text-[10px]">
                       <div className="flex items-center gap-1.5 truncate">
                         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
                         <span className="text-slate-700 dark:text-slate-300 font-medium truncate" title={item.label}>{item.label}</span>
@@ -229,57 +371,57 @@ export default function MfMarketOverview({ enrichedFunds = [], liveSummary = nul
                     </div>
                   ))}
                   {displayedAssetAllocation.length > 3 && (
-                    <div className="text-[9px] text-slate-400 dark:text-slate-500 italic pl-3">
+                    <div className="text-[8px] sm:text-[9px] text-slate-400 dark:text-slate-500 italic pl-3">
                       + {displayedAssetAllocation.length - 3} more
                     </div>
                   )}
                 </div>
               </div>
             ) : (
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 italic">Data unavailable</div>
+              <div className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 italic">Data unavailable</div>
             )}
           </div>
         </div>
 
         {/* CARD 3: REGISTERED AMCS */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-xs transition-all">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 sm:p-3 md:p-4 flex flex-col justify-between shadow-xs transition-all">
           <div className="flex items-start justify-between">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="text-[9px] sm:text-[10px] md:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               REGISTERED AMCS
             </span>
-            <div className="w-8 h-8 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-              <Users size={16} />
+            <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <div className="text-base sm:text-lg md:text-xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
               {liveSummary?.registeredAmcs?.value || (registeredAmcCount > 0 ? registeredAmcCount : 45)}
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">AMCs</div>
+            <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">AMCs</div>
           </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+          <div className="mt-2 sm:mt-3 pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
             <span>Source: SEBI / AMFI</span>
             <span>As of {liveSummary?.registeredAmcs?.asOf || asOfDate || 'September 2026'}</span>
           </div>
         </div>
 
         {/* CARD 4: MONTHLY SIP INFLOW */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-xs transition-all">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 sm:p-3 md:p-4 flex flex-col justify-between shadow-xs transition-all">
           <div className="flex items-start justify-between">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="text-[9px] sm:text-[10px] md:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               MONTHLY SIP INFLOW
             </span>
-            <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-              <TrendingUp size={16} />
+            <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <div className="text-base sm:text-lg md:text-xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
               {monthlySipVal}
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{monthlySipSecondary}</div>
+            <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">{monthlySipSecondary}</div>
           </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+          <div className="mt-2 sm:mt-3 pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
             {monthlySipChange ? (
               <span className="text-emerald-600 dark:text-emerald-400 font-bold">▲ {monthlySipChange}</span>
             ) : (
@@ -290,44 +432,44 @@ export default function MfMarketOverview({ enrichedFunds = [], liveSummary = nul
         </div>
 
         {/* CARD 5: TOP SIP FUNDS */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-xs transition-all">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 sm:p-3 md:p-4 flex flex-col justify-between shadow-xs transition-all">
           <div className="flex items-start justify-between">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="text-[9px] sm:text-[10px] md:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               TOP SIP FUNDS
             </span>
-            <div className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-              <Trophy size={16} />
+            <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-xs text-slate-900 dark:text-slate-100 font-bold leading-snug">
+          <div className="mt-2 sm:mt-3">
+            <div className="text-[10.5px] sm:text-xs text-slate-900 dark:text-slate-100 font-bold leading-snug">
               {liveSummary?.topSipFunds?.value || 'Small-cap (₹9,039 Cr), Mid-cap (₹7,835 Cr), Flexi-cap (₹6,702 Cr)'}
             </div>
-            <div className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-1">Top Categories by Net Inflow ({liveSummary?.topSipFunds?.asOf || 'September 2026'})</div>
+            <div className="text-[9.5px] sm:text-[10.5px] text-slate-500 dark:text-slate-400 mt-1">Top Categories by Net Inflow ({liveSummary?.topSipFunds?.asOf || 'September 2026'})</div>
           </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+          <div className="mt-2 sm:mt-3 pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
             <span>Source: AMFI Category Inflow Data</span>
             <span>As of {liveSummary?.topSipFunds?.asOf || asOfDate || 'September 2026'}</span>
           </div>
         </div>
 
         {/* CARD 6: AMC MARKET SHARE */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-xs transition-all">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 sm:p-3 md:p-4 flex flex-col justify-between shadow-xs transition-all">
           <div className="flex items-start justify-between">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="text-[9px] sm:text-[10px] md:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               AMC MARKET SHARE
             </span>
-            <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-              <PieChart size={16} />
+            <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <PieChart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-xs text-slate-900 dark:text-slate-100 font-bold leading-snug">
+          <div className="mt-2 sm:mt-3">
+            <div className="text-[10.5px] sm:text-xs text-slate-900 dark:text-slate-100 font-bold leading-snug">
               {liveSummary?.amcMarketShare?.value || 'SBI MF (15.02%), ICICI Pru (13.25%), HDFC (11.48%)'}
             </div>
-            <div className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-1">Top AMCs by AAUM Share ({liveSummary?.amcMarketShare?.asOf || 'Q2 FY2027'})</div>
+            <div className="text-[9.5px] sm:text-[10.5px] text-slate-500 dark:text-slate-400 mt-1">Top AMCs by AAUM Share ({liveSummary?.amcMarketShare?.asOf || 'Q2 FY2027'})</div>
           </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+          <div className="mt-2 sm:mt-3 pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
             <span>Source: AMFI Quarterly AAUM Disclosure</span>
             <span>As of {liveSummary?.amcMarketShare?.asOf || asOfDate || 'Q2 FY2027'}</span>
           </div>

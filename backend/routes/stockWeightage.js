@@ -75,6 +75,21 @@ router.get('/sectors', async (req, res) => {
 });
 
 /**
+ * GET /api/analytics/mutual-fund/stock-weightage/major-holdings
+ * GET /api/analytics/mutual-funds/major-holdings
+ * Returns live aggregated sector allocations & top stocks majorly invested
+ */
+router.get('/major-holdings', async (req, res) => {
+  try {
+    const data = await stockWeightageService.getSectorWiseAndMajorStockHoldings();
+    res.json(data);
+  } catch (err) {
+    console.error('Major holdings overview error:', err);
+    res.status(500).json({ error: 'Failed to fetch major holdings overview', details: err.message });
+  }
+});
+
+/**
  * Alias: GET /api/analytics/mutual-funds/stocks
  */
 router.get('/stocks', async (req, res) => {

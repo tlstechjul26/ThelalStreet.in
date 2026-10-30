@@ -6,7 +6,8 @@ export default function TimeframeSelector({
   activeRange, 
   onChange, 
   earliestDate = null, 
-  className = '' 
+  className = '',
+  assetType = null
 }) {
   const [showFyDropdown, setShowFyDropdown] = useState(false);
   const [showCyDropdown, setShowCyDropdown] = useState(false);
@@ -27,18 +28,46 @@ export default function TimeframeSelector({
   const fyRanges = listAvailableFinancialYears(earliestDate).map(label => ({ type: 'fy', label }));
   const cyRanges = listAvailableCalendarYears(earliestDate).map(label => ({ type: 'cy', label }));
 
-  const rollingOptions = [
+  const allRollingOptions = [
     { label: '1D', val: '1d' },
     { label: '1W', val: '1w' },
     { label: '1M', val: '1mo' },
+    { label: '3M', val: '3m' },
+    { label: '6M', val: '6m' },
     { label: '1Y', val: '1y' },
+    { label: '3Y', val: '3y' },
     { label: '5Y', val: '5y' },
     { label: 'ALL', val: 'max' }
   ];
 
+  const rollingOptions = assetType === 'mf'
+    ? allRollingOptions.filter(opt => opt.val !== '1d' && opt.val !== '1w' && opt.val !== '3m')
+    : allRollingOptions;
+
+  useEffect(() => {
+    if (assetType === 'mf' && typeof activeRange === 'string') {
+      const lower = activeRange.toLowerCase();
+      if (lower === '1d' || lower === '1w' || lower === '3m') {
+        onChange('1y');
+      }
+    }
+  }, [assetType, activeRange, onChange]);
+
   // Helper to determine if a range is active
   const isActive = (val) => {
-    if (typeof activeRange === 'string' && typeof val === 'string') return activeRange === val;
+    if (typeof activeRange === 'string' && typeof val === 'string') {
+      const a = activeRange.toLowerCase();
+      const v = val.toLowerCase();
+      if (a === v) return true;
+      if ((a === '1m' || a === '1mo') && (v === '1m' || v === '1mo')) return true;
+      if ((a === '3m' || a === '3mo') && (v === '3m' || v === '3mo')) return true;
+      if ((a === '6m' || a === '6mo') && (v === '6m' || v === '6mo')) return true;
+      if ((a === '1y' || a === '1yr') && (v === '1y' || v === '1yr')) return true;
+      if ((a === '3y' || a === '3yr') && (v === '3y' || v === '3yr')) return true;
+      if ((a === '5y' || a === '5yr') && (v === '5y' || v === '5yr')) return true;
+      if ((a === 'all' || a === 'max') && (v === 'all' || v === 'max')) return true;
+      return false;
+    }
     if (typeof activeRange === 'object' && typeof val === 'object') {
       return activeRange.type === val.type && activeRange.label === val.label;
     }

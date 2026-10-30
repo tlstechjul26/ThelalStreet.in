@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { 
   X, Search, Plus, Check, ChevronLeft, ChevronRight,
@@ -9,6 +10,7 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip
 } from 'recharts';
 import BrandLogo from './BrandLogo';
+import TradingViewChart from '../TradingViewChart';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -20,6 +22,8 @@ export default function StockDetailPanel({
   onSelectFund = () => {},
   onViewAllFunds = () => {}
 }) {
+  const reduxTheme = useSelector(state => state.market?.theme);
+  const isDark = reduxTheme ? reduxTheme === 'dark' : (typeof document !== 'undefined' && document.documentElement.classList.contains('dark'));
   const propSymbol = stockSymbol || symbol || selectedStock;
   const activeSymbol = (typeof propSymbol === 'object' 
     ? (propSymbol?.symbol || propSymbol?.stock || propSymbol?.stockSymbol) 
@@ -550,7 +554,14 @@ export default function StockDetailPanel({
                     <YAxis domain={['auto', 'auto']} tick={{ fill: '#94a3b8', fontSize: 10 }} />
                     <Tooltip 
                       formatter={(val) => [`${val}%`, 'Avg. Weight']}
-                      contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '11px' }}
+                      contentStyle={{ 
+                        background: isDark ? '#0f172a' : '#ffffff', 
+                        border: isDark ? '1px solid #334155' : '1px solid #cbd5e1', 
+                        borderRadius: '8px', 
+                        color: isDark ? '#fff' : '#0f172a', 
+                        fontSize: '11px',
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                      }}
                     />
                     <Area 
                       type="monotone" 
@@ -618,7 +629,7 @@ export default function StockDetailPanel({
       )}
 
       {activeTab === 'price-chart' && (
-        <div className="p-4 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
+        <div className="p-4 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white">Market Quote & Price Action</h3>
             <span className="text-xs font-mono text-slate-400">NSE: {detail.symbol}</span>
@@ -637,6 +648,9 @@ export default function StockDetailPanel({
           </div>
           <div className="text-xs text-slate-500">
             Market Cap: <strong>{quote?.marketCapCr ? formatCr(quote.marketCapCr) : (ownershipSummary.totalAumOfHoldingFundsCr ? formatCr(ownershipSummary.totalAumOfHoldingFundsCr) : '—')}</strong>
+          </div>
+          <div className="pt-2">
+            <TradingViewChart symbol={detail.symbol} socket={null} />
           </div>
         </div>
       )}

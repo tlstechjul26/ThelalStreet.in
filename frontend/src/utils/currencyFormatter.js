@@ -1,10 +1,19 @@
 export const isGlobalSymbol = (symbol) => {
   if (!symbol) return false;
+  const sym = String(symbol).toUpperCase().trim();
+  // Indian benchmarks
+  if (sym.startsWith('^NSE') || sym.startsWith('^BSE') || sym.startsWith('^CRSL') || sym.startsWith('^INDIA') || sym.includes('NIFTY') || sym.includes('SENSEX')) {
+    return false;
+  }
+  // US / Global benchmarks
+  if (sym === '^GSPC' || sym === '^IXIC' || sym === '^DJI' || sym === '^FTSE' || sym === '^N225' || sym === 'S&P 500') {
+    return true;
+  }
   // Indian stocks typically have .NS or .BO suffix, or are 6-digit MF codes
-  if (symbol.endsWith('.NS') || symbol.endsWith('.BO')) return false;
-  if (/^\d{5,6}$/.test(symbol)) return false; // Indian MF scheme codes
+  if (sym.endsWith('.NS') || sym.endsWith('.BO')) return false;
+  if (/^\d{5,6}$/.test(sym)) return false; // Indian MF scheme codes
   // Global stocks/ETFs are alphabetic with optional hyphen/dot without Indian exchange suffixes (e.g. AAPL, BRK-B, SPY)
-  if (/^[A-Z0-9.-]+$/i.test(symbol)) return true;
+  if (/^[A-Z0-9.-]+$/i.test(sym)) return true;
   return false;
 };
 

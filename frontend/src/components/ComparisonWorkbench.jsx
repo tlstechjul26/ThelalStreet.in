@@ -50,6 +50,7 @@ export default function ComparisonWorkbench() {
         layout: {
           background: { color: 'transparent' },
           textColor: '#94a3b8',
+          attributionLogo: false,
         },
         grid: {
           vertLines: { color: 'rgba(30, 41, 59, 0.5)', style: 1 },

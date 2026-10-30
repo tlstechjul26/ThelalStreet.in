@@ -19,6 +19,8 @@
   --loss-bg: rgba(239, 68, 68, 0.1);
   --accent: #3b82f6;
   --accent-hover: #2563eb;
+  --bg-popover: #1e293b;
+  --bg-tooltip: #1e293b;
 }
 
 .theme-light {
@@ -36,6 +38,8 @@
   --loss-bg: rgba(220, 38, 38, 0.12);
   --accent: #2563eb;
   --accent-hover: #1d4ed8;
+  --bg-popover: #ffffff;
+  --bg-tooltip: #ffffff;
 }
 
 /* Light mode high-contrast component overrides */
@@ -138,13 +142,31 @@
   box-sizing: border-box;
 }
 
+html {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  position: relative;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
+  width: 100%;
+  max-width: 100%;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  position: relative;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  position: relative;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -294,4 +316,28 @@ h1, h2, h3, h4, h5, h6 {
 }
 .theme-light .data-table td {
   border-bottom-color: rgba(226, 232, 240, 0.5);
+}
+
+/* Suppress TradingView attribution logo across all Lightweight Charts */
+#tv-attr-logo,
+a#tv-attr-logo,
+.tv-attr-logo,
+a[href*="tradingview.com"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Hide scrollbar utilities */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }

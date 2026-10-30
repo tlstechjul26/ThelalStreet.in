@@ -1,9 +1,15 @@
 import express from 'express';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import marketDataGateway from '../services/MarketDataGateway.js';
 import sectorDataService from '../services/SectorDataService.js';
 import { getIndianMarketSession } from '../services/MarketDataValidator.js';
 
 const router = express.Router();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const SNAPSHOT_PATH = path.resolve(__dirname, '../data/real_indices_snapshot.json');
 
 const INDEX_MAP = {
   '^NSEI': 'NIFTY 50',
@@ -27,6 +33,21 @@ const INDEX_MAP = {
 };
 
 let indicesCache = null;
+try {
+  if (fs.existsSync(SNAPSHOT_PATH)) {
+    const raw = JSON.parse(fs.readFileSync(SNAPSHOT_PATH, 'utf8'));
+    if (raw && Object.keys(raw).length > 0) {
+      indicesCache = {
+        indices: raw,
+        meta: { source: 'YAHOO_FINANCE_SNAPSHOT', status: 'EOD' },
+        timestamp: Date.now() - 60000
+      };
+    }
+  }
+} catch (e) {
+  console.warn('[market/indices] Failed to read disk snapshot:', e.message);
+}
+
 let indicesCacheTime = 0;
 let inFlightIndices = null;
 const INDICES_CACHE_TTL = 15000; // 15 seconds
@@ -61,15 +82,21 @@ async function fetchMarketIndicesData() {
   const hasData = Object.keys(indices).length > 0;
   const session = getIndianMarketSession();
   const meta = {
-    source: hasData ? 'YAHOO_FINANCE' : 'YAHOO_FINANCE_UNAVAILABLE',
-    status: hasData ? (session.isOpen ? 'LIVE' : 'EOD') : 'UNAVAILABLE'
+    source: hasData ? 'YAHOO_FINANCE' : (indicesCache?.meta?.source || 'YAHOO_FINANCE_UNAVAILABLE'),
+    status: hasData ? (session.isOpen ? 'LIVE' : 'EOD') : (indicesCache?.meta?.status || 'UNAVAILABLE')
   };
 
   if (hasData) {
     indicesCache = { indices, meta, timestamp: Date.now() };
+    fs.promises.writeFile(SNAPSHOT_PATH, JSON.stringify(indices, null, 2)).catch(() => {});
   }
-  return { indices, meta };
+  return { indices: (hasData ? indices : (indicesCache?.indices || {})), meta };
 }
+
+// Initial pre-warm on module load
+fetchMarketIndicesData().catch(e => {
+  console.warn('[market/indices] Startup pre-warm failed:', e.message);
+});
 
 // Get indices values from authoritative gateway (Yahoo Finance sole provider)
 router.get('/indices', async (req, res) => {

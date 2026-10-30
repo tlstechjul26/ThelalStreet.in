@@ -41,6 +41,10 @@ export class AthBaseService {
     const seenDailyDates = new Set();
     const seenAllDates = new Set();
 
+    const upperSym = (yahooSym || '').toUpperCase();
+    const isIndianSecurity = upperSym.endsWith('.NS') || upperSym.endsWith('.BO') || (!upperSym.includes('.') && !['SPY', 'QQQ', 'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META'].includes(upperSym));
+    const indianEpochTime = new Date('2000-01-01T00:00:00Z').getTime();
+
     // 1. Ingest and validate monthly candles (historical lifetime for ATH)
     for (const q of (mQuotes || [])) {
       if (
@@ -50,7 +54,9 @@ export class AthBaseService {
         typeof q.low === 'number' && !isNaN(q.low) && q.low > 0 &&
         q.high >= q.low && q.date
       ) {
-        const dStr = new Date(q.date).toISOString().split('T')[0];
+        const d = new Date(q.date);
+        if (isIndianSecurity && d.getTime() < indianEpochTime) continue;
+        const dStr = d.toISOString().split('T')[0];
         if (!seenAllDates.has(dStr)) {
           seenAllDates.add(dStr);
           allQuotes.push({
@@ -73,7 +79,9 @@ export class AthBaseService {
         typeof q.low === 'number' && !isNaN(q.low) && q.low > 0 &&
         q.high >= q.low && q.date
       ) {
-        const dStr = new Date(q.date).toISOString().split('T')[0];
+        const d = new Date(q.date);
+        if (isIndianSecurity && d.getTime() < indianEpochTime) continue;
+        const dStr = d.toISOString().split('T')[0];
         const candleObj = {
           date: dStr,
           high: q.high,
@@ -319,7 +327,7 @@ export class AthBaseService {
             { quotes: [] }
           ),
           withTimeout(
-            yahooFinance.chart(sym, { period1: 0, period2: now, interval: '1mo' }).catch(() => ({ quotes: [] })),
+            yahooFinance.chart(sym, { period1: (sym.toUpperCase().endsWith('.NS') || sym.toUpperCase().endsWith('.BO') || !sym.includes('.')) ? Math.floor(new Date('2000-01-01T00:00:00Z').getTime() / 1000) : 0, period2: now, interval: '1mo' }).catch(() => ({ quotes: [] })),
             10000,
             { quotes: [] }
           )

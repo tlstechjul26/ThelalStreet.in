@@ -3,13 +3,14 @@
 export const MARKET_FILTERS = [
   { id: 'all', label: 'All Markets' },
   { id: 'equity', label: 'Equity' },
-  { id: 'elss', label: 'TAX SAVER' },
-  { id: 'debt', label: 'Debt' },
   { id: 'hybrid', label: 'Hybrid' },
+  { id: 'sectoral_thematic', label: 'Sectoral & Thematic' },
   { id: 'index', label: 'Index' },
+  { id: 'debt', label: 'Debt' },
   { id: 'commodities', label: 'Commodities' },
-  { id: 'global', label: 'Global' },
-  { id: 'sectoral_thematic', label: 'Sectoral & Thematic' }
+  { id: 'fof', label: 'Fund of Funds' },
+  { id: 'elss', label: 'Tax Saver' },
+  { id: 'global', label: 'Global' }
 ];
 
 export const MF_CATEGORIES = {
@@ -120,6 +121,15 @@ export const MF_CATEGORIES = {
     { id: 'mnc', label: 'MNC Funds' },
     { id: 'esg', label: 'ESG Funds' },
     { id: 'other_sectoral', label: 'Other Sector/Thematic' }
+  ],
+  fof: [
+    { id: 'all', label: 'All Fund of Funds' },
+    { id: 'domestic_fof', label: 'Domestic FoF' },
+    { id: 'overseas_fof', label: 'Overseas FoF' },
+    { id: 'equity_fof', label: 'Equity / ETF FoF' },
+    { id: 'hybrid_fof', label: 'Hybrid / Asset Allocator FoF' },
+    { id: 'commodity_fof', label: 'Commodity FoF' },
+    { id: 'other_fof', label: 'Other FoF' }
   ]
 };
 
@@ -134,7 +144,7 @@ export const PRIMARY_TAB_TO_CAT_KEY = {
   index: 'index',
   global: 'global',
   gift: 'global',
-  fof: 'equity',
+  fof: 'fof',
   commodities: 'commodities',
   nps: 'debt',
   sectoral_thematic: 'sectoral_thematic'

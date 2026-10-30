@@ -5,7 +5,7 @@ import yahooFinanceService from './YahooFinanceService.js';
 import quarterlyRevenueService from './QuarterlyRevenueService.js';
 import marketDataGateway from './MarketDataGateway.js';
 import athBaseService from './AthBaseService.js';
-import { getIndianMarketSession, KNOWN_GLOBAL_SYMBOLS } from './MarketDataValidator.js';
+import { getIndianMarketSession, isFinancialEntity, KNOWN_GLOBAL_SYMBOLS } from './MarketDataValidator.js';
 import { runWithConcurrencyLimit, withTimeout } from '../utils/concurrencyLimiter.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1748,7 +1748,8 @@ class SectorDataService {
       const stockRets = returnsMap.get(stock.symbol) || (stock.symbol.endsWith('.NS') ? returnsMap.get(stock.symbol.replace('.NS', '')) : null) || { '1W': null, '1M': null, '6M': null, '1Y': null, '3Y': null, '5Y': null, 'ALL': null };
       const stockAthBase = athBaseMap.get(stock.symbol) || (stock.symbol.endsWith('.NS') ? athBaseMap.get(stock.symbol.replace('.NS', '')) : null);
 
-      const resolvedEbit = isFinancialSector ? null : (stockFin?.ebit ?? quote?.ebit ?? null);
+      const isFinStock = isFinancialSector || isFinancialEntity(stock.symbol);
+      const resolvedEbit = isFinStock ? null : (stockFin?.ebit ?? quote?.ebit ?? null);
       const resolvedRevenue = stockFin?.revenue ?? quote?.revenue ?? null;
       const resolvedRevenueYoY = stockFin?.revenueYoY ?? quote?.revenueYoY ?? null;
       const resolvedRevenueQuarterly = stockFin?.revenueQuarterly ?? quote?.revenueQuarterly ?? null;
@@ -1847,10 +1848,10 @@ class SectorDataService {
           athBaseMetrics: stockAthBase || null,
           source: quote.source || "YAHOO_FINANCE",
           sourceType: quote.sourceType || "YAHOO_QUOTE",
-          dataStatus: quote.dataStatus || (quote.isLive ? "LIVE" : "EOD"),
-          isLive: quote.isLive ?? false,
-          priceAsOf: quote.priceAsOf || new Date().toISOString(),
-          fetchedAt: quote.priceAsOf || quote.lastUpdatedAt || new Date().toISOString(),
+          dataStatus: getIndianMarketSession().isOpen ? (quote.isLive === true ? "LIVE" : (quote.dataStatus || "DELAYED")) : (quote.dataStatus && quote.dataStatus !== 'LIVE' ? quote.dataStatus : "EOD"),
+          isLive: getIndianMarketSession().isOpen && quote.isLive === true,
+          priceAsOf: quote.priceAsOf || (!getIndianMarketSession().isOpen && getIndianMarketSession().istDateStr ? `${getIndianMarketSession().istDateStr}T15:30:00+05:30` : new Date().toISOString()),
+          fetchedAt: quote.fetchedAt || quote.priceAsOf || quote.lastUpdatedAt || new Date().toISOString(),
           lastUpdatedAt: quote.lastUpdatedAt || new Date().toISOString()
         };
       }

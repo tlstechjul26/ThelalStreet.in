@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
 import { useSelector, useDispatch } from 'react-redux';
 import { setActiveSymbol } from '../store/slices/marketSlice';
 import { createChart } from 'lightweight-charts';
-import { Search, X, PieChart as PieChartIcon, ArrowUpRight, ArrowDownRight, Calculator } from 'lucide-react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, ReferenceLine } from 'recharts';
+import { Search, X, PieChart as PieChartIcon, ArrowUpRight, ArrowDownRight, Calculator, Pencil, Trash2 } from 'lucide-react';
 import MfInvestmentCalculator from './MfInvestmentCalculator';
+import TradingViewChart from './TradingViewChart';
 import TimeframeSelector from './TimeframeSelector';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -18,16 +20,28 @@ export default function MutualFundPanel({ initialScheme = null, region = 'india'
   const [earliestDate, setEarliestDate] = useState(null);
   const [holdingsData, setHoldingsData] = useState(null);
   
-  const [chartInterval, setChartInterval] = useState('1yr');
-  const [chartType, setChartType] = useState('line');
+  const [chartInterval, setChartInterval] = useState('1y');
+  const [chartType, setChartType] = useState('area');
+  const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [hoverCoord, setHoverCoord] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
+
+  // Trendline state for double-tap / click measurement
+  const [trendline, setTrendline] = useState(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [drawingStart, setDrawingStart] = useState(null);
+  const [hoverPoint, setHoverPoint] = useState(null);
+  const [activeDragHandle, setActiveDragHandle] = useState(null);
   
   const chartContainerRef = useRef(null);
+  const svgOverlayRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef(null);
+  const baselineSeriesRef = useRef(null);
   const debounceRef = useRef(null);
+  const lastTapTimeRef = useRef(0);
 
   // Load scheme details if activeMfScheme or initialScheme changes
   useEffect(() => {
@@ -72,7 +86,10 @@ export default function MutualFundPanel({ initialScheme = null, region = 'india'
         if (res.headers['x-earliest-date']) {
           setEarliestDate(Number(res.headers['x-earliest-date']));
         }
-        setNavData(res.data);
+        const items = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+        setNavData(items);
+        setHoveredPoint(null);
+        setHoverCoord(null);
       } catch (err) {
         console.error(err);
       }
@@ -101,99 +118,243 @@ export default function MutualFundPanel({ initialScheme = null, region = 'india'
     }, 500);
   }, [searchQuery]);
 
-  // Construct Chart
+  // Tickertape-Style Metrics & Stats
+  const sortedData = useMemo(() => {
+    return [...navData].sort((a, b) => a.time - b.time);
+  }, [navData]);
+
+  const uniqueData = useMemo(() => {
+    return sortedData.filter((c, i, arr) => 
+      i === 0 || Math.floor(c.time / 1000) > Math.floor(arr[i - 1].time / 1000)
+    );
+  }, [sortedData]);
+
+  const startPoint = uniqueData[0];
+  const startNav = startPoint ? startPoint.value : 0;
+  const latestPoint = uniqueData[uniqueData.length - 1];
+  const latestNav = latestPoint ? latestPoint.value : 0;
+  const periodChange = latestNav - startNav;
+  const periodChangePct = startNav > 0 ? (periodChange / startNav) * 100 : 0;
+  const isPeriodGain = latestNav >= startNav;
+  const themeColor = isPeriodGain ? '#00b386' : '#eb5b3c';
+
+  const periodLow = useMemo(() => {
+    if (uniqueData.length === 0) return 0;
+    return Math.min(...uniqueData.map(c => c.value));
+  }, [uniqueData]);
+
+  const periodHigh = useMemo(() => {
+    if (uniqueData.length === 0) return 0;
+    return Math.max(...uniqueData.map(c => c.value));
+  }, [uniqueData]);
+
+  const formatDate = (t) => {
+    if (!t) return '';
+    const d = typeof t === 'number' && t < 10000000000 ? new Date(t * 1000) : new Date(t);
+    return d.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const activeNav = hoveredPoint?.value ?? latestNav;
+  const activeChange = hoveredPoint ? hoveredPoint.change : periodChange;
+  const activeChangePct = hoveredPoint ? hoveredPoint.changePct : periodChangePct;
+  const activeDate = hoveredPoint?.date || formatDate(latestPoint?.time);
+
+  const monthlyReturns = useMemo(() => {
+    if (!uniqueData || uniqueData.length < 2) return [];
+    const monthGroups = new Map();
+    uniqueData.forEach(pt => {
+      const d = typeof pt.time === 'number' && pt.time < 10000000000 ? new Date(pt.time * 1000) : new Date(pt.time);
+      if (isNaN(d.getTime())) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+      if (!monthGroups.has(key)) {
+        monthGroups.set(key, { key, label, points: [] });
+      }
+      monthGroups.get(key).points.push(pt);
+    });
+
+    const result = [];
+    monthGroups.forEach(({ label, points }) => {
+      if (points.length === 0) return;
+      const startVal = points[0].value;
+      const endVal = points[points.length - 1].value;
+      const diff = endVal - startVal;
+      const returnPct = startVal > 0 ? Number(((diff / startVal) * 100).toFixed(2)) : 0;
+      const isGain = returnPct >= 0;
+      result.push({
+        month: label,
+        returnPct,
+        startNav: startVal,
+        endNav: endVal,
+        diff: Number(diff.toFixed(2)),
+        isGain,
+        fill: isGain ? '#00b386' : '#eb5b3c'
+      });
+    });
+    return result;
+  }, [uniqueData]);
+
+  // Construct Tickertape Chart
   useEffect(() => {
-    if (!chartContainerRef.current || navData.length === 0) return;
+    if (!chartContainerRef.current || uniqueData.length === 0) return;
 
-    if (!chartRef.current) {
-      const chart = createChart(chartContainerRef.current, {
-        width: chartContainerRef.current.clientWidth,
-        height: 380,
-        layout: {
-          background: { color: 'transparent' },
-          textColor: '#94a3b8',
+    const chart = createChart(chartContainerRef.current, {
+      width: chartContainerRef.current.clientWidth,
+      height: 380,
+      layout: {
+        background: { color: '#0f172a' },
+        textColor: '#94a3b8',
+        attributionLogo: false,
+      },
+      grid: {
+        vertLines: { visible: false },
+        horzLines: { color: 'rgba(148, 163, 184, 0.08)' },
+      },
+      crosshair: {
+        mode: 0,
+        vertLine: {
+          color: 'rgba(148, 163, 184, 0.4)',
+          width: 1,
+          style: 3,
+          labelBackgroundColor: '#1e293b',
         },
-        grid: {
-          vertLines: { color: '#1e293b' },
-          horzLines: { color: '#1e293b' },
+        horzLine: {
+          color: 'rgba(148, 163, 184, 0.4)',
+          width: 1,
+          style: 3,
+          labelBackgroundColor: '#1e293b',
         },
-        timeScale: {
-          timeVisible: true,
-          borderColor: '#334155',
-        },
-        priceScale: {
-          borderColor: '#334155',
-        }
+      },
+      timeScale: {
+        timeVisible: true,
+        borderColor: 'rgba(148, 163, 184, 0.15)',
+      },
+      priceScale: {
+        borderColor: 'rgba(148, 163, 184, 0.15)',
+      }
+    });
+    chartRef.current = chart;
+
+    // Subtle Tickertape Baseline Reference Line at Start NAV
+    if (startNav > 0 && uniqueData.length > 1) {
+      const baselineSeries = chart.addLineSeries({
+        color: 'rgba(148, 163, 184, 0.35)',
+        lineWidth: 1,
+        lineStyle: 1,
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
       });
-      chartRef.current = chart;
-      
-      const resizeObserver = new ResizeObserver(entries => {
-        for (let entry of entries) {
-          if (entry.target === chartContainerRef.current && chartRef.current) {
-            chartRef.current.resize(entry.contentRect.width, 380);
-          }
-        }
-      });
-      
-      resizeObserver.observe(chartContainerRef.current);
-      
-      // Store observer to clean up later
-      chartRef.current.observer = resizeObserver;
-    }
-    
-    if (seriesRef.current) {
-      chartRef.current.removeSeries(seriesRef.current);
+      baselineSeries.setData(uniqueData.map(c => ({
+        time: Math.floor(c.time / 1000),
+        value: startNav
+      })));
+      baselineSeriesRef.current = baselineSeries;
     }
 
+    let mainSeries;
     if (chartType === 'candlestick') {
-      seriesRef.current = chartRef.current.addCandlestickSeries({
-        upColor: '#22c55e',
-        downColor: '#ef4444',
+      mainSeries = chart.addCandlestickSeries({
+        upColor: '#00b386',
+        downColor: '#eb5b3c',
         borderVisible: false,
-        wickUpColor: '#22c55e',
-        wickDownColor: '#ef4444',
+        wickUpColor: '#00b386',
+        wickDownColor: '#eb5b3c',
       });
+      mainSeries.setData(uniqueData.map(d => ({
+        time: Math.floor(d.time / 1000),
+        open: d.value,
+        high: d.value,
+        low: d.value,
+        close: d.value
+      })));
+    } else if (chartType === 'line') {
+      mainSeries = chart.addLineSeries({
+        color: themeColor,
+        lineWidth: 2,
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 5,
+        crosshairMarkerBorderColor: '#ffffff',
+        crosshairMarkerBackgroundColor: themeColor,
+      });
+      mainSeries.setData(uniqueData.map(d => ({
+        time: Math.floor(d.time / 1000),
+        value: d.value
+      })));
     } else {
-      seriesRef.current = chartRef.current.addAreaSeries({
-        lineColor: '#3b82f6',
-        topColor: 'rgba(59, 130, 246, 0.4)',
-        bottomColor: 'rgba(59, 130, 246, 0.0)',
+      const topColor = isPeriodGain ? 'rgba(0, 179, 134, 0.25)' : 'rgba(235, 91, 60, 0.25)';
+      const bottomColor = isPeriodGain ? 'rgba(0, 179, 134, 0.0)' : 'rgba(235, 91, 60, 0.0)';
+      mainSeries = chart.addAreaSeries({
+        lineColor: themeColor,
+        topColor,
+        bottomColor,
+        lineWidth: 2,
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 5,
+        crosshairMarkerBorderColor: '#ffffff',
+        crosshairMarkerBackgroundColor: themeColor,
       });
+      mainSeries.setData(uniqueData.map(d => ({
+        time: Math.floor(d.time / 1000),
+        value: d.value
+      })));
     }
-    
-    if (seriesRef.current) {
-      const uniqueData = navData.filter((c, i, arr) => i === 0 || c.time > arr[i - 1].time);
-      if (chartType === 'candlestick') {
-        seriesRef.current.setData(uniqueData.map(d => ({
-          time: Math.floor(d.time / 1000),
-          open: d.value,
-          high: d.value,
-          low: d.value,
-          close: d.value
-        })));
-      } else {
-        seriesRef.current.setData(uniqueData.map(d => ({
-          time: Math.floor(d.time / 1000),
-          value: d.value
-        })));
-      }
-      chartRef.current.timeScale().fitContent();
-    }
-    
-  }, [navData, chartType]);
+    seriesRef.current = mainSeries;
 
-  // Cleanup chart on unmount
-  useEffect(() => {
-    return () => {
-      if (chartRef.current) {
-        if (chartRef.current.observer) {
-          chartRef.current.observer.disconnect();
-        }
-        chartRef.current.remove();
-        chartRef.current = null;
+    chart.subscribeCrosshairMove((param) => {
+      if (!param || !param.time || !param.seriesData || !param.point) {
+        setHoveredPoint(null);
+        setHoverCoord(null);
+        return;
       }
+      const seriesData = param.seriesData.get(mainSeries);
+      if (!seriesData) {
+        setHoveredPoint(null);
+        setHoverCoord(null);
+        return;
+      }
+      const val = chartType === 'candlestick' ? seriesData.close : seriesData.value;
+      if (val === undefined || isNaN(val)) {
+        setHoveredPoint(null);
+        setHoverCoord(null);
+        return;
+      }
+
+      let dateFormatted = '';
+      if (typeof param.time === 'number') {
+        const d = new Date(param.time * 1000);
+        dateFormatted = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      } else if (param.time && typeof param.time === 'object') {
+        const { year, month, day } = param.time;
+        const d = new Date(year, month - 1, day);
+        dateFormatted = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+
+      const change = val - startNav;
+      const changePct = startNav > 0 ? (change / startNav) * 100 : 0;
+      setHoveredPoint({ value: val, change, changePct, date: dateFormatted });
+      setHoverCoord({ x: param.point.x, y: param.point.y });
+    });
+
+    const resizeObserver = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        if (entry.target === chartContainerRef.current && chartRef.current) {
+          chartRef.current.resize(entry.contentRect.width, 380);
+        }
+      }
+    });
+    resizeObserver.observe(chartContainerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+      chart.remove();
+      chartRef.current = null;
     };
-  }, []);
+  }, [uniqueData, chartType, themeColor, isPeriodGain, startNav]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -254,49 +415,89 @@ export default function MutualFundPanel({ initialScheme = null, region = 'india'
       ) : (
         <>
           {/* Main Chart Area */}
-          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] p-4 rounded-xl flex flex-col gap-4 z-10">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-bold text-[var(--text-primary)]">{scheme.schemeName}</h2>
-                <p className="text-sm text-[var(--text-muted)]">Code: {scheme.schemeCode}</p>
-              </div>
-              
-              <div className="flex items-center">
-              <div className="flex items-center gap-1 bg-[var(--bg-secondary)] p-1 border border-[var(--border-color)] rounded-md mr-2">
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 gap-0.5">
                 <button
-                  onClick={() => setChartType('line')}
-                  className={`px-3 py-1 text-xs font-mono font-bold rounded ${
-                    chartType === 'line' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                  onClick={() => setChartType('area')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                    chartType !== 'monthly' ? 'bg-[#16B85A] text-white shadow-xs font-bold' : 'text-[#64748b] hover:text-slate-900 hover:bg-white'
                   }`}
                 >
-                  Line
+                  Performance Chart
                 </button>
                 <button
-                  onClick={() => setChartType('candlestick')}
-                  className={`px-3 py-1 text-xs font-mono font-bold rounded ${
-                    chartType === 'candlestick' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                  onClick={() => setChartType('monthly')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                    chartType === 'monthly' ? 'bg-[#16B85A] text-white shadow-xs font-bold' : 'text-[#64748b] hover:text-slate-900 hover:bg-white'
                   }`}
                 >
-                  Candlesticks
+                  Monthly Breakdown
                 </button>
               </div>
+            </div>
 
-              <TimeframeSelector
-                activeRange={chartInterval}
-                onChange={setChartInterval}
-                earliestDate={earliestDate}
-              />
-              </div>
-            </div>
-            
-            <div className="w-full relative bg-slate-900 rounded-lg overflow-hidden">
-              {navData.length === 0 && (
-                <div className="absolute inset-0 flex items-center justify-center text-sm text-[var(--text-muted)] z-10">
-                  Loading NAV data...
+            {chartType === 'monthly' ? (
+              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 text-slate-900">
+                <h3 className="text-sm font-bold text-slate-900 mb-3">Monthly Historical Return Breakdown</h3>
+                <div className="h-[360px] w-full">
+                  {monthlyReturns.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={monthlyReturns} margin={{ top: 10, right: 15, left: -15, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.12)" vertical={false} />
+                        <XAxis
+                          dataKey="month"
+                          stroke="#cbd5e1"
+                          tick={{ fontSize: 11, fill: '#64748b' }}
+                          tickLine={false}
+                          axisLine={{ stroke: '#e2e8f0' }}
+                        />
+                        <YAxis
+                          stroke="#cbd5e1"
+                          tick={{ fontSize: 11, fill: '#64748b' }}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(v) => `${v}%`}
+                        />
+                        <Tooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length > 0) {
+                              const d = payload[0].payload;
+                              return (
+                                <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-xl text-xs font-sans text-slate-900 dark:text-slate-100">
+                                  <div className="text-[#64748b] font-medium mb-1">{d.month} Historical Return</div>
+                                  <div className={`text-base font-extrabold font-mono ${d.isGain ? 'text-[#16B85A]' : 'text-[#eb5b3c]'}`}>
+                                    {d.isGain ? '▲ +' : '▼ '}{d.returnPct.toFixed(2)}%
+                                  </div>
+                                  <div className="text-slate-500 font-mono text-[11px] mt-1 space-y-0.5">
+                                    <div>Start NAV: ₹{d.startNav.toFixed(2)}</div>
+                                    <div>End NAV: ₹{d.endNav.toFixed(2)}</div>
+                                    <div>Change: {d.diff >= 0 ? '+' : ''}₹{d.diff.toFixed(2)}</div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <ReferenceLine y={0} stroke="rgba(148, 163, 184, 0.45)" strokeDasharray="2 2" />
+                        <Bar dataKey="returnPct" radius={[4, 4, 0, 0]}>
+                          {monthlyReturns.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.isGain ? '#16B85A' : '#eb5b3c'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-xs text-slate-400 italic">
+                      Monthly breakdown requires historical NAV data.
+                    </div>
+                  )}
                 </div>
-              )}
-              <div ref={chartContainerRef} className="w-full h-[380px]" />
-            </div>
+              </div>
+            ) : (
+              <TradingViewChart schemeCode={scheme?.schemeCode || scheme?.id} fund={scheme} assetType="mf" region={region} height={380} />
+            )}
           </div>
 
           {/* Interactive Calculator */}
@@ -356,7 +557,7 @@ export default function MutualFundPanel({ initialScheme = null, region = 'india'
                             {hasQuote ? (
                               <div>
                                 <div className="font-mono text-sm font-medium text-[var(--text-primary)]">
-                                  {holdingsData?.currency === 'USD' ? '$' : holdingsData?.currency === 'EUR' ? '€' : holdingsData?.currency === 'GBP' ? '£' : '₹'}
+                                  {holdingsData?.currency === 'USD' ? '$' : holdingsData?.currency === 'EUR' ? '€' : holdingsData?.currency === 'GBP' ? '£' : ''}
                                   {h.ltp?.toLocaleString(holdingsData?.currency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: 2 })}
                                 </div>
                                 <div className={`flex items-center justify-end gap-0.5 font-mono text-xs ${isUp ? 'text-gain' : isDown ? 'text-loss' : 'text-[var(--text-muted)]'}`}>

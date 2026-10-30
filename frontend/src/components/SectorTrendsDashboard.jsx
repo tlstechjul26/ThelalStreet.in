@@ -93,7 +93,7 @@ export default function SectorTrendsDashboard() {
     const chart = createChart(chartContainerRef.current, {
       width: chartContainerRef.current.clientWidth,
       height: 380,
-      layout: { background: { color: 'transparent' }, textColor: '#94a3b8', fontFamily: "'Inter', system-ui, sans-serif" },
+      layout: { background: { color: 'transparent' }, textColor: '#94a3b8', fontFamily: "'Inter', system-ui, sans-serif", attributionLogo: false },
       grid: { vertLines: { color: 'rgba(148, 163, 184, 0.06)' }, horzLines: { color: 'rgba(148, 163, 184, 0.06)' } },
       rightPriceScale: { borderColor: 'rgba(148, 163, 184, 0.1)', scaleMargins: { top: 0.1, bottom: 0.1 } },
       timeScale: { borderColor: 'rgba(148, 163, 184, 0.1)', timeVisible: false },

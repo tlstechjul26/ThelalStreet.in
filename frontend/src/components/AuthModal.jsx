@@ -134,8 +134,9 @@ export default function AuthModal() {
   };
 
   const handleGoogleLogin = () => {
-    // Redirect to backend Google OAuth initiation route
-    window.location.href = `${API_BASE}/auth/google`;
+    // Redirect to backend Google OAuth initiation route with exact return origin
+    const returnTo = encodeURIComponent(window.location.origin);
+    window.location.href = `${API_BASE}/auth/google?returnTo=${returnTo}`;
   };
 
   return (

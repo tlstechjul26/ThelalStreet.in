@@ -1,5 +1,6 @@
 import express from 'express';
 import sectorDataService from '../services/SectorDataService.js';
+import etfService, { INDIAN_ETF_UNIVERSE } from '../services/ETFService.js';
 
 const router = express.Router();
 
@@ -190,11 +191,36 @@ router.get('/search', async (req, res) => {
     console.warn('[search] Failed to search subcategories:', err.message);
   }
 
+  // ETFs search across verified Indian ETF universe
+  const etfs = [];
+  try {
+    const etfUniverse = INDIAN_ETF_UNIVERSE || [];
+    const matchedEtfs = etfUniverse.filter(e => {
+      const sym = (e.symbol || '').toLowerCase();
+      const name = (e.name || '').toLowerCase();
+      const amc = (e.amc || '').toLowerCase();
+      const underlying = (e.underlying || '').toLowerCase();
+      return sym.includes(qLower) || name.includes(qLower) || amc.includes(qLower) || underlying.includes(qLower);
+    });
+    etfs.push(...matchedEtfs.slice(0, 8).map(e => ({
+      symbol: e.symbol,
+      name: e.name,
+      amc: e.amc,
+      category: e.categoryLabel || e.category || 'ETF',
+      underlying: e.underlying,
+      expenseRatio: e.expenseRatio,
+      aumCr: e.aumCr
+    })));
+  } catch (err) {
+    console.warn('[search] Failed to search ETFs:', err.message);
+  }
+
   res.json({
     sectors: sectors.slice(0, 6),
     stocks: stocks.slice(0, 8),
     funds,
-    subcategories
+    subcategories,
+    etfs
   });
 });
 
@@ -207,6 +233,18 @@ router.get('/all-stocks', async (req, res) => {
   } catch (err) {
     console.error('All ranked stocks fetch error:', err.message);
     res.status(500).json({ error: 'Failed to fetch all ranked stocks' });
+  }
+});
+
+// GET /api/sectors/all-etfs (Groww & Zerodha compliant Indian ETFs universe)
+router.get('/all-etfs', async (req, res) => {
+  try {
+    const { category, timeframe } = req.query;
+    const etfs = await etfService.getAllIndianETFs({ category, timeframe });
+    res.json(etfs);
+  } catch (err) {
+    console.error('All ETFs fetch error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch all ETFs' });
   }
 });
 

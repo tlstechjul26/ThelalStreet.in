@@ -31,7 +31,8 @@ class RiskAnalyticsService {
         return false; // Reject Regular, IDCW, or Dividend schemes
       }
 
-      const isEtfOrCommodity = /\b(etf|bees|gold|silver|commodity)\b/i.test(lowerName);
+      const isFoF = /\b(fof|fund of funds|fund of fund)\b/i.test(lowerName);
+      const isEtfOrCommodity = isFoF || /\b(etf|bees|gold|silver|commodity|index)\b/i.test(lowerName);
       if (!isEtfOrCommodity) {
         const isDir = lowerName.includes('direct') || lowerName.includes('-dir') || lowerName.includes('(dir)') || lowerName.includes(' dir ');
         const isGr = lowerName.includes('growth') || lowerName.includes('-gr') || lowerName.includes('(gr)') || lowerName.includes(' gr ');
@@ -477,6 +478,155 @@ class RiskAnalyticsService {
       methodologyLabel: 'Sharpe Ratio (Since Inception - Historical Rf Aligned)',
       sortinoMethodologyLabel: 'Sortino Ratio (Since Inception - Historical Rf Aligned)',
       sourceLabel: 'Calculated by MarketPulse from monthly NAV history and verified RBI T-Bill historical series',
+      status: rfAnnual !== null && sharpeRatio !== null ? 'CALCULATED' : 'UNAVAILABLE'
+    };
+  }
+
+  getRiskMetrics1YMonthly(navHistory, benchmarkHistory = [], customRf = null, schemeMetadata = {}) {
+    if (!this.validateSchemeIdentity(schemeMetadata)) {
+      return {
+        sharpeRatio: null,
+        sortinoRatio: null,
+        volatility: null,
+        dataPointsCount: 0,
+        riskFreeRate: null,
+        riskAnalyticsVersion: this.riskAnalyticsVersion,
+        methodologyLabel: 'Sharpe Ratio (1-Year Monthly)',
+        sortinoMethodologyLabel: 'Sortino Ratio (1-Year Monthly)',
+        sourceLabel: 'Calculated by MarketPulse from monthly NAV history',
+        status: 'UNAVAILABLE',
+        reason: 'SCHEME_IDENTITY_MISMATCH'
+      };
+    }
+
+    let rfAnnual = null;
+    if (customRf && typeof customRf === 'object') {
+      if (customRf.status === 'VERIFIED' && typeof customRf.value === 'number' && customRf.value > 0) {
+        rfAnnual = customRf.value;
+      }
+    } else if (typeof customRf === 'number' && customRf > 0) {
+      rfAnnual = customRf;
+    }
+
+    if (rfAnnual === null || typeof rfAnnual !== 'number' || rfAnnual <= 0) {
+      return {
+        sharpeRatio: null,
+        sortinoRatio: null,
+        volatility: null,
+        dataPointsCount: 0,
+        riskFreeRate: null,
+        riskAnalyticsVersion: this.riskAnalyticsVersion,
+        methodologyLabel: 'Sharpe Ratio (1-Year Monthly)',
+        sortinoMethodologyLabel: 'Sortino Ratio (1-Year Monthly)',
+        sourceLabel: 'Calculated by MarketPulse from monthly NAV history',
+        status: 'UNAVAILABLE',
+        reason: 'Verified RBI risk-free rate unavailable'
+      };
+    }
+
+    const monthEndNavs = this.extractMonthEndNavs(navHistory);
+    const firstNAVDate = monthEndNavs[0] ? monthEndNavs[0].dateStr : null;
+    const lastNAVDate = monthEndNavs[monthEndNavs.length - 1] ? monthEndNavs[monthEndNavs.length - 1].dateStr : null;
+
+    if (monthEndNavs.length < 13) {
+      const dailyPrices = (navHistory || []).map(d => typeof d.value === 'number' ? d.value : (typeof d.nav === 'number' ? d.nav : parseFloat(d.nav || d.value))).filter(p => !isNaN(p) && p > 0);
+      const dailyReturns = this.calculateReturns(dailyPrices);
+      if (dailyReturns.length >= 15 && rfAnnual !== null) {
+        const dSharpe = this.calculateDailySharpeRatio(dailyReturns, rfAnnual);
+        const dSortino = this.calculateDailySortinoRatio(dailyReturns, rfAnnual);
+        if (dSharpe !== null) {
+          const dailyVol = this.calculateVolatility(dailyReturns);
+          return {
+            sharpeRatio: dSharpe,
+            sortinoRatio: dSortino,
+            volatility: parseFloat((dailyVol * 100).toFixed(2)),
+            dataPointsCount: dailyReturns.length,
+            firstNAVDate,
+            lastNAVDate,
+            firstObservationMonth: monthEndNavs[0] ? monthEndNavs[0].key : null,
+            lastObservationMonth: monthEndNavs[monthEndNavs.length - 1] ? monthEndNavs[monthEndNavs.length - 1].key : null,
+            riskFreeRate: rfAnnual,
+            rfCoverage: '100% (Daily Annualized)',
+            riskAnalyticsVersion: this.riskAnalyticsVersion,
+            methodologyLabel: 'Sharpe Ratio (Daily Annualized)',
+            sortinoMethodologyLabel: 'Sortino Ratio (Daily Annualized)',
+            sourceLabel: 'Calculated by MarketPulse from daily NAV history',
+            status: 'CALCULATED'
+          };
+        }
+      }
+      return {
+        sharpeRatio: null,
+        sortinoRatio: null,
+        volatility: null,
+        dataPointsCount: Math.max(0, monthEndNavs.length - 1),
+        firstNAVDate,
+        lastNAVDate,
+        riskFreeRate: rfAnnual,
+        riskAnalyticsVersion: this.riskAnalyticsVersion,
+        methodologyLabel: 'Sharpe Ratio (1-Year Monthly)',
+        sortinoMethodologyLabel: 'Sortino Ratio (1-Year Monthly)',
+        sourceLabel: 'Calculated by MarketPulse from monthly NAV history',
+        status: 'UNAVAILABLE',
+        reason: 'INSUFFICIENT_HISTORY_MIN_13_MONTH_END_NAVS_REQUIRED'
+      };
+    }
+
+    const targetNavs = monthEndNavs.slice(-13);
+    const N = 12;
+    const sliceFirstNAVDate = targetNavs[0] ? targetNavs[0].dateStr : null;
+    const sliceLastNAVDate = targetNavs[targetNavs.length - 1] ? targetNavs[targetNavs.length - 1].dateStr : null;
+
+    const rbiHistoricalRf = {
+      '2013': 0.0785, '2014': 0.0835, '2015': 0.0760, '2016': 0.0685,
+      '2017': 0.0620, '2018': 0.0675, '2019': 0.0590, '2020': 0.0375,
+      '2021': 0.0355, '2022': 0.0510, '2023': 0.0670, '2024': 0.0680,
+      '2025': 0.0650, '2026': 0.0625
+    };
+
+    const monthlyReturns = [];
+    const rfList = [];
+    for (let i = 1; i < targetNavs.length; i++) {
+      const prev = targetNavs[i - 1];
+      const curr = targetNavs[i];
+      const mReturn = (curr.value - prev.value) / prev.value;
+      const year = curr.dateStr ? curr.dateStr.split('-')[0] : (curr.key ? curr.key.split('-')[0] : '2026');
+      const annualRfForYear = rbiHistoricalRf[year] !== undefined ? rbiHistoricalRf[year] : rfAnnual;
+      
+      monthlyReturns.push(mReturn);
+      rfList.push(annualRfForYear);
+    }
+
+    const sharpeRatio = this.calculateMonthlySharpeRatio(monthlyReturns, rfList);
+    const sortinoRatio = this.calculateMonthlySortinoRatio(monthlyReturns, rfList);
+
+    let volatilityAnnualized = 0;
+    if (monthlyReturns.length > 1) {
+      const excessReturnList = monthlyReturns.map((r, i) => {
+        const rfMonthly = Math.pow(1 + rfList[i], 1 / 12) - 1;
+        return r - rfMonthly;
+      });
+      const meanExcess = excessReturnList.reduce((sum, val) => sum + val, 0) / N;
+      const sumSqExcessDiff = excessReturnList.reduce((sum, val) => sum + Math.pow(val - meanExcess, 2), 0);
+      const sampleStdDevExcess = Math.sqrt(sumSqExcessDiff / (N - 1));
+      volatilityAnnualized = sampleStdDevExcess * Math.sqrt(12);
+    }
+
+    return {
+      sharpeRatio,
+      sortinoRatio,
+      volatility: parseFloat((volatilityAnnualized * 100).toFixed(2)),
+      dataPointsCount: N,
+      firstNAVDate: sliceFirstNAVDate,
+      lastNAVDate: sliceLastNAVDate,
+      firstObservationMonth: targetNavs[0] ? targetNavs[0].key : null,
+      lastObservationMonth: targetNavs[targetNavs.length - 1] ? targetNavs[targetNavs.length - 1].key : null,
+      riskFreeRate: rfAnnual,
+      rfCoverage: '100% (1-Year RBI Historical Series Aligned)',
+      riskAnalyticsVersion: this.riskAnalyticsVersion,
+      methodologyLabel: 'Sharpe Ratio (1-Year Monthly)',
+      sortinoMethodologyLabel: 'Sortino Ratio (1-Year Monthly)',
+      sourceLabel: 'Calculated by MarketPulse from 12 monthly NAV returns',
       status: rfAnnual !== null && sharpeRatio !== null ? 'CALCULATED' : 'UNAVAILABLE'
     };
   }

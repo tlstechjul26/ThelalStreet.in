@@ -1997,6 +1997,132 @@ class StockWeightageService {
     };
     return this._sectorBreakdownCache;
   }
+
+  /**
+   * Complete Sector-Wise Asset Distribution & Top Stocks Majorly Invested by Mutual Funds
+   * Aggregated across verified statutory institutional portfolios with live market metrics.
+   */
+  async getSectorWiseAndMajorStockHoldings() {
+    await this.init();
+    if (this._sectorWiseMajorHoldingsCache && (Date.now() - this._sectorWiseMajorHoldingsTimestamp < 60000)) {
+      return this._sectorWiseMajorHoldingsCache;
+    }
+
+    const secBreakdown = await this.getSectorBreakdown();
+    const colorPalette = [
+      'bg-indigo-500',
+      'bg-emerald-500',
+      'bg-amber-500',
+      'bg-purple-500',
+      'bg-rose-500',
+      'bg-cyan-500',
+      'bg-orange-500',
+      'bg-pink-500',
+      'bg-teal-500',
+      'bg-blue-500'
+    ];
+
+    const validSectors = (secBreakdown?.sectors || [])
+      .filter(s => s.sector && s.sector !== 'Unknown / Unmapped' && s.sector !== 'Other' && !s.sector.includes('FITCH') && !s.sector.includes('BRICKWORKS'))
+      .slice(0, 10)
+      .map((s, idx) => ({
+        sector: s.sector,
+        weight: `${s.percentageOfTotal.toFixed(1)}%`,
+        pct: s.percentageOfTotal,
+        aum: s.totalHoldingValueCr >= 100000 
+          ? `₹ ${(s.totalHoldingValueCr / 100000).toFixed(2)} Lakh Cr`
+          : `₹ ${s.totalHoldingValueCr.toLocaleString('en-IN', { maximumFractionDigits: 0 })} Cr`,
+        totalHoldingValueCr: s.totalHoldingValueCr,
+        fundsCount: s.fundsHoldingCount,
+        stocksCount: s.stocksCount,
+        color: colorPalette[idx % colorPalette.length]
+      }));
+
+    const screener = await this.getScreenerResults({ limit: 10, sortBy: 'totalAumExposureCr', sortOrder: 'desc' });
+    const topSymbols = (screener?.stocks || []).map(s => `${s.symbol}.NS`);
+    
+    // Fetch live volume and quote details from authoritative gateway
+    let quoteMap = new Map();
+    try {
+      const quotesRes = await marketDataGateway.getQuotes(topSymbols);
+      if (quotesRes?.data) {
+        quotesRes.data.forEach(q => {
+          if (q?.symbol) {
+            quoteMap.set(q.symbol, q);
+            const clean = q.symbol.replace(/\.(NS|BO)$/i, '');
+            quoteMap.set(clean, q);
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('Could not fetch quotes for major holdings:', e.message);
+    }
+
+    const topStocks = (screener?.stocks || []).map((s) => {
+      const q = quoteMap.get(s.symbol) || quoteMap.get(`${s.symbol}.NS`) || {};
+      const stObj = this.stockMap.get(s.symbol);
+      const topFundsList = (stObj?.holdingSchemes || [])
+        .sort((a, b) => (b.weightPct || 0) - (a.weightPct || 0))
+        .slice(0, 3)
+        .map(sch => (sch.schemeName || '')
+          .replace(/ - (Direct Plan|Regular Plan).*/i, '')
+          .replace(/ (Growth|Growth Option|IDCW).*/i, '')
+          .trim())
+        .filter(Boolean)
+        .join(', ');
+
+      const rawVol = q.volume || s.volume;
+      let volumeStr = '—';
+      if (rawVol && !isNaN(rawVol)) {
+        volumeStr = rawVol >= 10000000 
+          ? `${(rawVol / 10000000).toFixed(2)} Cr` 
+          : rawVol >= 1000000 
+          ? `${(rawVol / 1000000).toFixed(1)}M` 
+          : rawVol >= 1000 
+          ? `${(rawVol / 1000).toFixed(0)}K` 
+          : rawVol.toLocaleString('en-IN');
+      }
+
+      const mcapCr = s.marketCapCr || q.marketCapCr || (q.marketCap ? Math.round(q.marketCap / 10000000) : null);
+      let mcapStr = '—';
+      if (mcapCr) {
+        mcapStr = mcapCr >= 100000 
+          ? `₹ ${(mcapCr / 100000).toFixed(2)} Lakh Cr` 
+          : `₹ ${Number(mcapCr).toLocaleString('en-IN')} Cr`;
+      }
+
+      const totalUniverse = s.totalUniverseFunds || 132;
+      const mfHoldingPct = s.fundsHolding ? `${((s.fundsHolding / totalUniverse) * 100).toFixed(1)}%` : '—';
+
+      return {
+        stock: s.name || s.stockName || s.symbol,
+        symbol: s.symbol,
+        exchangeSymbol: `${s.symbol}.NS`,
+        sector: s.sector || 'Equities',
+        weight: `${(s.avgWeightage || s.averageWeightPct || 0).toFixed(2)}%`,
+        mcap: mcapStr,
+        mcapCr: mcapCr,
+        volume: volumeStr,
+        rawVolume: rawVol || null,
+        mfHolding: mfHoldingPct,
+        fundsHolding: s.fundsHolding,
+        totalUniverseFunds: totalUniverse,
+        price: q.ltp || s.price || null,
+        topFunds: topFundsList || 'Major Large Cap & Flexi Cap Schemes'
+      };
+    });
+
+    const result = {
+      sectors: validSectors,
+      topStocks,
+      totalValueAnalysedCr: secBreakdown?.totalValueAnalysedCr || 0,
+      timestamp: Date.now()
+    };
+
+    this._sectorWiseMajorHoldingsCache = result;
+    this._sectorWiseMajorHoldingsTimestamp = Date.now();
+    return result;
+  }
 }
 
 const stockWeightageService = new StockWeightageService();
