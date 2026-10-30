@@ -5,7 +5,7 @@ import {
   Search, Info, RefreshCcw, ChevronDown, ChevronRight, Activity, 
   TrendingUp, BarChart2, BarChart3, Briefcase, Percent, Award, ShieldAlert, 
   Sparkles, Calendar, HelpCircle, Flame, Plus, CheckCircle2, PieChart as PieChartIcon, X, Pin,
-  Filter, Layers, Download, Bookmark, BookmarkCheck, RotateCcw, Trash2, Maximize2, ArrowRight, ShieldCheck, Crosshair, Pencil, Check, Building2
+  Filter, Layers, Bookmark, BookmarkCheck, RotateCcw, Trash2, Maximize2, ArrowRight, ShieldCheck, Crosshair, Pencil, Check, Building2
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Customized, ReferenceLine } from 'recharts';
 import { useWorkbench } from '../context/WorkbenchContext';
@@ -3100,23 +3100,6 @@ export const IndianMfSectorAnalysis = () => {
               <span className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.2 rounded-full bg-indigo-100 dark:bg-indigo-900/60 font-mono">
                 {showFactsAndFigures ? '▲ Hide' : '▼ View'}
               </span>
-            </button>
-
-            {/* Download Data Button */}
-            <button
-              onClick={() => {
-                const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(enrichedFunds, null, 2))}`;
-                const downloadAnchor = document.createElement('a');
-                downloadAnchor.setAttribute("href", jsonString);
-                downloadAnchor.setAttribute("download", `TheLalStreetScreener_Mutual_Funds_${new Date().toISOString().slice(0,10)}.json`);
-                document.body.appendChild(downloadAnchor);
-                downloadAnchor.click();
-                downloadAnchor.remove();
-              }}
-              className="flex-1 sm:flex-none justify-center px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10px] sm:text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
-            >
-              <Download size={13} />
-              <span>Download Data</span>
             </button>
           </div>
         </div>

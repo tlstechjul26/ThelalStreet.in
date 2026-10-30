@@ -189,9 +189,6 @@ export default function MfMarketOverview({ enrichedFunds = [], liveSummary = nul
               <div className="text-base font-extrabold font-mono text-slate-900 dark:text-white mt-0.5">
                 {totalFundsDisplay}
               </div>
-              <div className="text-[9px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                Active Direct Growth Schemes
-              </div>
             </div>
 
             {/* Registered AMCs */}
@@ -318,7 +315,6 @@ export default function MfMarketOverview({ enrichedFunds = [], liveSummary = nul
                     ? liveSummary.totalFunds.value.toLocaleString('en-IN')
                     : (totalFundsCount > 0 ? totalFundsCount.toLocaleString('en-IN') : '—')}
                 </span>
-                <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 truncate max-w-[130px] sm:max-w-none">Active Direct Growth Schemes</span>
               </div>
             </div>
             <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
