@@ -14,13 +14,13 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import MarketIndicesTicker from './components/MarketIndicesTicker';
 import TopMoversWidget from './components/TopMoversWidget';
-import SectorHeatmap from './pages/SectorHeatmap';
-import LandingPage from './pages/LandingPage';
-import HowToUseModal from './components/HowToUseModal';
-import AuthModal from './components/AuthModal';
 import { WorkbenchProvider } from './context/WorkbenchContext';
 
-// Lazy-loaded pages for fast initial bundle loading
+// Lazy-loaded pages and modals for fast initial bundle loading
+const SectorHeatmap = lazy(() => import('./pages/SectorHeatmap'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const HowToUseModal = lazy(() => import('./components/HowToUseModal'));
+const AuthModal = lazy(() => import('./components/AuthModal'));
 const SectorDetail = lazy(() => import('./pages/SectorDetail'));
 const StockDetails = lazy(() => import('./pages/StockDetails'));
 // const MfExplorer = lazy(() => import('./components/MfExplorer'));
@@ -28,6 +28,7 @@ const MfAnalyticsDashboard = lazy(() => import('./pages/MfAnalyticsDashboard'));
 // const SectorExplorer = lazy(() => import('./components/SectorExplorer'));
 // const SectorTrendsDashboard = lazy(() => import('./components/SectorTrendsDashboard'));
 const IndianMfSectorAnalysis = lazy(() => import('./pages/IndianMfSectorAnalysis'));
+const RegisteredAmcsFactsPage = lazy(() => import('./pages/RegisteredAmcsFactsPage'));
 const ComparisonWorkbench = lazy(() => import('./components/ComparisonWorkbench'));
 const DisclaimerPage = lazy(() => import('./pages/DisclaimerPage'));
 const DocumentationPage = lazy(() => import('./pages/DocumentationPage'));
@@ -179,7 +180,7 @@ function App() {
               dispatch(setUser(meRes.data.user));
             }
           } catch (err) {
-            if (err.response?.status === 401 && err.response?.data?.error?.includes('revoked')) {
+            if (err.response?.status === 401 || err.response?.status === 403) {
               dispatch(logout());
             }
           }
@@ -286,7 +287,7 @@ function App() {
       if (activeView !== 'stock-detail' && activeView !== 'sector-detail') {
         dispatch(setActiveView('heatmap'));
       }
-    } else if (path === '/mutual-funds') {
+    } else if (path === '/mutual-funds' || path === '/mutual-funds/registered-amcs') {
       dispatch(setAssetClass('indian-mf'));
       dispatch(setActiveView('indian-mf'));
       dispatch(setHowToUseOpen(false));
@@ -350,6 +351,7 @@ function App() {
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/stocks" element={renderStocksView()} />
                   <Route path="/mutual-funds" element={<IndianMfSectorAnalysis />} />
+                  <Route path="/mutual-funds/registered-amcs" element={<RegisteredAmcsFactsPage />} />
                   <Route path="/analytics" element={<MfAnalyticsDashboard />} />
                   <Route path="/global-stocks" element={renderGlobalStocksView()} />
                   <Route path="/how-to-use" element={<LandingPage />} />
@@ -380,18 +382,22 @@ function App() {
         </Suspense>
 
         {/* How to Use Modal */}
-        <HowToUseModal 
-          isOpen={howToUseOpen || location.pathname === '/how-to-use'} 
-          onClose={() => {
-            dispatch(setHowToUseOpen(false));
-            if (location.pathname === '/how-to-use') {
-              navigate('/');
-            }
-          }} 
-        />
+        <Suspense fallback={null}>
+          <HowToUseModal 
+            isOpen={howToUseOpen || location.pathname === '/how-to-use'} 
+            onClose={() => {
+              dispatch(setHowToUseOpen(false));
+              if (location.pathname === '/how-to-use') {
+                navigate('/');
+              }
+            }} 
+          />
+        </Suspense>
 
         {/* Auth Modal for Login, Signup & Google OAuth */}
-        <AuthModal />
+        <Suspense fallback={null}>
+          <AuthModal />
+        </Suspense>
 
         {/* Decorative background elements */}
         <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">

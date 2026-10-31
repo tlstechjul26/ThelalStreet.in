@@ -169,15 +169,19 @@ const getStockBadge = (symbol = '') => {
 
 // Authentic multi-period returns from real historical backend price data
 const getMultiPeriodReturns = (item) => {
-  if (item?.returns && typeof item.returns === 'object') {
+  const rets = (item?.returns && typeof item.returns === 'object' && Object.keys(item.returns).length > 0)
+    ? item.returns
+    : (item?.performance && typeof item.performance === 'object' ? item.performance : null);
+
+  if (rets) {
     return {
-      '1W': item.returns['1W'] !== undefined && item.returns['1W'] !== null ? Number(item.returns['1W']) : null,
-      '1M': item.returns['1M'] !== undefined && item.returns['1M'] !== null ? Number(item.returns['1M']) : null,
-      '6M': item.returns['6M'] !== undefined && item.returns['6M'] !== null ? Number(item.returns['6M']) : null,
-      '1Y': item.returns['1Y'] !== undefined && item.returns['1Y'] !== null ? Number(item.returns['1Y']) : null,
-      '3Y': item.returns['3Y'] !== undefined && item.returns['3Y'] !== null ? Number(item.returns['3Y']) : null,
-      '5Y': item.returns['5Y'] !== undefined && item.returns['5Y'] !== null ? Number(item.returns['5Y']) : null,
-      'ALL': item.returns['ALL'] !== undefined && item.returns['ALL'] !== null ? Number(item.returns['ALL']) : null
+      '1W': rets['1W'] !== undefined && rets['1W'] !== null ? Number(rets['1W']) : null,
+      '1M': rets['1M'] !== undefined && rets['1M'] !== null ? Number(rets['1M']) : null,
+      '6M': rets['6M'] !== undefined && rets['6M'] !== null ? Number(rets['6M']) : null,
+      '1Y': rets['1Y'] !== undefined && rets['1Y'] !== null ? Number(rets['1Y']) : null,
+      '3Y': rets['3Y'] !== undefined && rets['3Y'] !== null ? Number(rets['3Y']) : null,
+      '5Y': rets['5Y'] !== undefined && rets['5Y'] !== null ? Number(rets['5Y']) : null,
+      'ALL': rets['ALL'] !== undefined && rets['ALL'] !== null ? Number(rets['ALL']) : null
     };
   }
   return { '1W': null, '1M': null, '6M': null, '1Y': null, '3Y': null, '5Y': null, 'ALL': null };
@@ -488,6 +492,16 @@ export default function SectorHeatmap() {
   const processedAllStocks = useMemo(() => {
     let list = [...allRankedUniverse];
 
+    // Filter by selected sector if a specific sector is chosen
+    if (selectedSectorFilter && selectedSectorFilter !== 'all' && selectedSectorFilter !== 'all_stocks' && selectedSectorFilter !== 'etfs') {
+      const targetFilter = selectedSectorFilter.toLowerCase().trim();
+      list = list.filter(stk => {
+        const sId = (stk.sectorId || '').toLowerCase().trim();
+        const sName = (stk.sector || stk.sectorName || '').toLowerCase().trim();
+        return sId === targetFilter || sName === targetFilter || sId.includes(targetFilter) || targetFilter.includes(sId) || sName.includes(targetFilter) || targetFilter.includes(sName);
+      });
+    }
+
     // Filter by search query across complete stock dataset
     if (stockSearchQuery.trim()) {
       const q = stockSearchQuery.toLowerCase().trim();
@@ -553,7 +567,7 @@ export default function SectorHeatmap() {
     }
 
     return list;
-  }, [allRankedUniverse, stockSearchQuery, stockFilterTab, globalSortKey, globalSortDirection, sortComparator]);
+  }, [allRankedUniverse, selectedSectorFilter, stockSearchQuery, stockFilterTab, globalSortKey, globalSortDirection, sortComparator]);
 
   // Filtered & sorted for ETFs table (Groww & Zerodha compliant)
   const processedEtfs = useMemo(() => {
@@ -729,7 +743,7 @@ export default function SectorHeatmap() {
     }
 
     // 2. Price
-    const rawPrice = isStock ? (item.ltp || item.price) : item.indexPrice;
+    const rawPrice = isStock ? (item.ltp || item.price) : (item.indexPrice || item.price || item.ltp);
     if (rawPrice !== null && rawPrice !== undefined && !isNaN(rawPrice) && Number(rawPrice) > 0) {
       items.push({
         label: 'P',
@@ -772,8 +786,20 @@ export default function SectorHeatmap() {
 
   // Render % from 52W Low / % from ATH with (52W L: ₹X on Date) (ATH: ₹Y on Date)
   const renderBaseAthMetrics = (item) => {
-    const recovery = item?.percentFrom52WLow ?? item?.pctFrom52WLow ?? item?.recoveryFromBasePercent ?? null;
-    const athDist = item?.percentFromATH ?? item?.pctFromATH ?? item?.distanceFromATHPercent ?? null;
+    const low52Price = item?.week52Low ?? item?.fiftyTwoWeekLow ?? item?.low52 ?? item?.longTermBaseLow ?? item?.baseLow ?? null;
+    const athPrice = item?.allTimeHigh ?? item?.fiftyTwoWeekHigh ?? item?.high52 ?? item?.ath ?? item?.ATH ?? null;
+    const currentPrice = item?.price ?? item?.ltp ?? item?.indexPrice ?? null;
+
+    let recovery = item?.percentFrom52WLow ?? item?.pctFrom52WLow ?? item?.recoveryFromBasePercent ?? null;
+    let athDist = item?.percentFromATH ?? item?.pctFromATH ?? item?.distanceFromATHPercent ?? null;
+
+    if (recovery === null && currentPrice && low52Price && low52Price > 0) {
+      recovery = parseFloat((((currentPrice - low52Price) / low52Price) * 100).toFixed(2));
+    }
+    if (athDist === null && currentPrice && athPrice && athPrice > 0) {
+      athDist = parseFloat((((currentPrice - athPrice) / athPrice) * 100).toFixed(2));
+    }
+
     const hasRecovery = recovery !== null && typeof recovery === 'number' && !isNaN(recovery);
     const hasAthDist = athDist !== null && typeof athDist === 'number' && !isNaN(athDist);
 
@@ -784,13 +810,11 @@ export default function SectorHeatmap() {
     const recoveryText = hasRecovery ? `${recovery > 0 ? '+' : ''}${recovery.toFixed(2)}%` : '—';
     const athDistText = hasAthDist ? `${athDist <= 0 ? '' : '+'}${athDist.toFixed(2)}%` : '—';
 
-    const low52Price = item?.week52Low ?? item?.longTermBaseLow ?? item?.baseLow ?? null;
     const low52Date = formatBaseAthDate(item?.week52LowDate ?? item?.longTermBaseLowDate ?? item?.baseLowDate);
-    const athPrice = item?.allTimeHigh ?? item?.ath ?? item?.ATH ?? null;
     const athDate = formatBaseAthDate(item?.allTimeHighDate ?? item?.athDate ?? item?.ATHDate);
 
-    const hasLowSub = low52Price !== null && low52Date;
-    const hasAthSub = athPrice !== null && athDate;
+    const hasLowSub = low52Price !== null;
+    const hasAthSub = athPrice !== null;
 
     return (
       <div className="flex flex-col items-center justify-center text-center py-0.5">
@@ -824,10 +848,10 @@ export default function SectorHeatmap() {
           return (
             <div className="text-[9px] text-slate-400 dark:text-slate-400 font-mono tracking-tight whitespace-nowrap mt-0.5 leading-tight">
               {hasLowSub && (
-                <div>(52W L: {curSym}{formatIndianNumber(low52Price, 2, 2)} on {low52Date})</div>
+                <div>(52W L: {curSym}{formatIndianNumber(low52Price, 2, 2)}{low52Date ? ` on ${low52Date}` : ''})</div>
               )}
               {hasAthSub && (
-                <div>(ATH: {curSym}{formatIndianNumber(athPrice, 2, 2)} on {athDate})</div>
+                <div>(ATH: {curSym}{formatIndianNumber(athPrice, 2, 2)}{athDate ? ` on ${athDate}` : ''})</div>
               )}
             </div>
           );
@@ -1773,9 +1797,24 @@ export default function SectorHeatmap() {
           {/* Subheader Toolbar: Filter Tabs + Search */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60">
             <div className="flex flex-wrap items-center gap-3">
-              <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 font-display">
-                All Indian Stocks Universe — <span className="font-mono text-slate-500 font-normal">{processedAllStocks.length} Ranked Stocks</span>
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 font-display">
+                  {selectedSectorFilter && selectedSectorFilter !== 'all' && selectedSectorFilter !== 'all_stocks' && selectedSectorFilter !== 'etfs'
+                    ? `${sectors.find(s => s.id === selectedSectorFilter || s.name === selectedSectorFilter)?.name || 'Sector'} Stocks`
+                    : 'All Indian Stocks Universe'} — <span className="font-mono text-slate-500 font-normal">{processedAllStocks.length} Ranked Stocks</span>
+                </h3>
+                {selectedSectorFilter && selectedSectorFilter !== 'all' && selectedSectorFilter !== 'all_stocks' && selectedSectorFilter !== 'etfs' && (
+                  <button
+                    onClick={() => {
+                      setSelectedSectorFilter('all_stocks');
+                      setCurrentPage(1);
+                    }}
+                    className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                  >
+                    (Show All Stocks)
+                  </button>
+                )}
+              </div>
 
               {/* Filter Tabs */}
               <div className="flex flex-wrap items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
@@ -2006,10 +2045,11 @@ export default function SectorHeatmap() {
                               className={`py-2.5 px-1 text-center font-mono font-medium text-[11px] ${
                                 sPos ? 'text-emerald-600 dark:text-emerald-400' :
                                 sNeg ? 'text-rose-600 dark:text-rose-400' :
+                                sVal === 0 ? 'text-slate-600 dark:text-slate-300' :
                                 'text-slate-400'
                               }`}
                             >
-                              {sVal !== null ? `${sPos ? '+' : ''}${sVal.toFixed(2)}%` : '—'}
+                              {sVal !== null && !isNaN(sVal) ? `${sPos ? '+' : ''}${sVal.toFixed(2)}%` : '—'}
                             </td>
                           );
                         })}
@@ -2042,32 +2082,32 @@ export default function SectorHeatmap() {
             </table>
           </div>
 
-          {/* ── MOBILE TABLE: Remains same for mobile view ── */}
+          {/* ── MOBILE TABLE: Groww-style Compact Stocks Screener with Fixed First Column ── */}
           <div className="sm:hidden overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
               <thead>
-                <tr className="bg-slate-50/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[9px]">
+                <tr className="bg-slate-50/90 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[9px]">
                   {/* Stock - sticky left-0 on mobile */}
-                  <th className="py-2 px-2 text-left sticky left-0 z-20 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 w-[140px] min-w-[140px] max-w-[140px]">
+                  <th className="py-1.5 px-1.5 text-left sticky left-0 z-20 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 w-[75px] min-w-[75px] max-w-[75px] sm:w-[90px] sm:min-w-[90px] sm:max-w-[90px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]">
                     Stock
                   </th>
 
                   {/* 52W H/L % - scrollable */}
-                  <th className="py-2 px-2 text-center border-r border-slate-200 dark:border-slate-800 min-w-[95px]">
-                    <div className="font-bold text-slate-700 dark:text-slate-200 text-[10px]">
+                  <th className="py-1.5 px-1.5 text-center border-r border-slate-200 dark:border-slate-800 min-w-[90px]">
+                    <div className="font-bold text-slate-700 dark:text-slate-200 text-[9.5px]">
                       52W H/L %
                     </div>
-                    <div className="text-[8px] font-medium text-slate-400 dark:text-slate-400 normal-case tracking-normal">
+                    <div className="text-[7.5px] font-medium text-slate-400 dark:text-slate-400 normal-case tracking-normal">
                       (52W L / ATH)
                     </div>
                   </th>
 
                   {/* Performance Header with Subcolumns */}
                   <th colSpan={7} className="py-1 px-1 text-center border-r border-slate-200 dark:border-slate-800">
-                    <div className="text-[9px] font-bold text-slate-700 dark:text-slate-300 pb-0.5">
+                    <div className="text-[8.5px] font-bold text-slate-700 dark:text-slate-300 pb-0.5">
                       Performance (%)
                     </div>
-                    <div className="grid grid-cols-7 gap-0.5 pt-0.5 border-t border-slate-200 dark:border-slate-800 font-medium text-[8px]">
+                    <div className="grid grid-cols-7 gap-0.5 pt-0.5 border-t border-slate-200 dark:border-slate-800 font-medium text-[7.5px]">
                       <span>1W</span>
                       <span>1M</span>
                       <span>6M</span>
@@ -2079,18 +2119,18 @@ export default function SectorHeatmap() {
                   </th>
 
                   {/* Revenue */}
-                  <th className="py-2 px-2.5 text-right min-w-[90px]">
-                    <div>Revenue (₹ Cr)</div>
-                    <div className="text-[8px] font-medium text-slate-400 dark:text-slate-400 normal-case tracking-normal">
+                  <th className="py-1.5 px-2 text-right min-w-[85px]">
+                    <div className="text-[9px]">Revenue (₹ Cr)</div>
+                    <div className="text-[7.5px] font-medium text-slate-400 dark:text-slate-400 normal-case tracking-normal">
                       Current Qtr YoY
                     </div>
                   </th>
 
                   {/* EBIT */}
-                  <th className="py-2.5 px-2.5 text-right">EBIT (₹ Cr)</th>
+                  <th className="py-1.5 px-2 text-right text-[9px]">EBIT (₹ Cr)</th>
 
                   {/* Sector */}
-                  <th className="py-2.5 px-3 text-left">Sector</th>
+                  <th className="py-1.5 px-2 text-left text-[9px]">Sector</th>
                 </tr>
               </thead>
 
@@ -2105,25 +2145,25 @@ export default function SectorHeatmap() {
                       <tr 
                         key={stock.symbol || sIdx}
                         onClick={() => dispatch(setActiveSymbol(stock.symbol))}
-                        className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors group"
                       >
                         {/* Stock Badge + Symbol + Submetrics - sticky */}
-                        <td className="py-2 px-2 sticky left-0 z-10 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 w-[140px] min-w-[140px] max-w-[140px]">
-                          <div className="flex items-center gap-1.5">
+                        <td className="py-1.5 px-1.5 sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 border-r border-slate-200 dark:border-slate-800 w-[75px] min-w-[75px] max-w-[75px] sm:w-[90px] sm:min-w-[90px] sm:max-w-[90px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]">
+                          <div className="flex items-center gap-1 min-w-0">
                             {(stock.indiaStockRank ?? stock.globalRank) != null && (
-                              <span className="font-mono text-[9px] font-bold text-slate-400">
+                              <span className="font-mono text-[8.5px] font-bold text-slate-400 shrink-0">
                                 #{stock.indiaStockRank ?? stock.globalRank}
                               </span>
                             )}
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${badge.bg}`}>
+                            <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8.5px] font-bold shrink-0 ${badge.bg}`}>
                               {badge.letter}
                             </div>
                             <div className="flex flex-col min-w-0">
-                              <span className="font-bold text-slate-900 dark:text-slate-100 text-[11px] truncate">
+                              <span className="font-bold text-slate-900 dark:text-slate-100 text-[10.5px] truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                                 {cleanSymbol}
                               </span>
                               {stock.name && stock.name !== cleanSymbol && (
-                                <span className="text-[9px] text-slate-400 truncate max-w-[85px]">
+                                <span className="text-[8.5px] text-slate-400 truncate max-w-[45px]">
                                   {stock.name}
                                 </span>
                               )}
@@ -2135,7 +2175,7 @@ export default function SectorHeatmap() {
                         </td>
 
                         {/* 52W H/L % */}
-                        <td className="py-2 px-1 text-center font-mono text-[9px] border-r border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 min-w-[95px]">
+                        <td className="py-1.5 px-1 text-center font-mono text-[8.5px] border-r border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 min-w-[90px]">
                           {renderBaseAthMetrics(stock)}
                         </td>
 
@@ -2147,30 +2187,31 @@ export default function SectorHeatmap() {
                           return (
                             <td 
                               key={p} 
-                              className={`py-2 px-1 text-center font-mono font-medium text-[9px] ${
+                              className={`py-1.5 px-1 text-center font-mono font-medium text-[8.5px] ${
                                 sPos ? 'text-emerald-600 dark:text-emerald-400' :
                                 sNeg ? 'text-rose-600 dark:text-rose-400' :
+                                sVal === 0 ? 'text-slate-600 dark:text-slate-300' :
                                 'text-slate-400'
                               }`}
                             >
-                              {sVal !== null ? `${sPos ? '+' : ''}${sVal.toFixed(2)}%` : '—'}
+                              {sVal !== null && !isNaN(sVal) ? `${sPos ? '+' : ''}${sVal.toFixed(2)}%` : '—'}
                             </td>
                           );
                         })}
 
                         {/* Revenue (Current Qtr YoY) */}
-                        <td className="py-2 px-2.5 text-right text-[10px]">
+                        <td className="py-1.5 px-2 text-right text-[9.5px]">
                           {renderRevenueCell(stock)}
                         </td>
 
                         {/* EBIT */}
-                        <td className="py-2 px-2.5 text-right font-mono text-slate-700 dark:text-slate-300 text-[9px]">
+                        <td className="py-1.5 px-2 text-right font-mono text-slate-700 dark:text-slate-300 text-[8.5px]">
                           {stock.ebit ? formatIndianNumber(stock.ebit, 0, 0) : '—'}
                         </td>
 
                         {/* Sector Column */}
-                        <td className="py-2 px-2.5 text-left text-[10px]">
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                        <td className="py-1.5 px-2 text-left text-[9px]">
+                          <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[8.5px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                             {stock.sector || stock.sectorName || 'General'}
                           </span>
                         </td>
@@ -2365,7 +2406,7 @@ export default function SectorHeatmap() {
 
                           {/* Price (₹) */}
                           <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 dark:text-slate-100">
-                            {sector.indexPrice ? formatIndianNumber(sector.indexPrice, 2, 2) : '—'}
+                            {(sector.indexPrice || sector.price || sector.ltp) ? formatIndianNumber(sector.indexPrice || sector.price || sector.ltp, 2, 2) : '—'}
                           </td>
 
                           {/* Multi-Period Performance Subcolumns */}
@@ -2403,318 +2444,152 @@ export default function SectorHeatmap() {
                           </td>
                         </tr>
 
-                        {/* Inline Accordion Expanded Sector Stocks (Desktop) */}
-                        {isExpanded && (
-                          <tr className="bg-slate-50/70 dark:bg-slate-900/90 border-t border-b border-slate-200 dark:border-slate-800">
-                            <td colSpan={17} className="p-3 sm:p-5">
-                              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-4">
-                                {/* Subheader: Sector Title + Filter Tabs + Search + View All Stocks */}
-                                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
-                                  <div className="flex flex-wrap items-center gap-3">
-                                    <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 font-display">
-                                      {sector.name} — <span className="font-mono text-slate-500 font-normal">{getExpandedStocks(sector).length} Stocks</span>
-                                    </h3>
+                        {/* Constituent Stocks (Desktop - rendered directly as sibling <tr> rows without nested card/table) */}
+                        {isExpanded && (() => {
+                          const constituentStocks = getExpandedStocks(sector);
+                          const displayedStocks = constituentStocks.slice(0, 5);
 
-                                    {/* Filter Tabs */}
-                                    <div className="flex flex-wrap items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
-                                      {[
-                                        { key: 'all', label: 'All Stocks' },
-                                        { key: 'largeCap', label: 'Large Cap' },
-                                        { key: 'midCap', label: 'Mid Cap' },
-                                        { key: 'smallCap', label: 'Small Cap' },
-                                        { key: 'gainers', label: 'Top Gainers' },
-                                        { key: 'losers', label: 'Top Losers' },
-                                        { key: 'marketCap', label: 'By Market Cap' }
-                                      ].map(tab => (
-                                        <button
-                                          key={tab.key}
-                                          onClick={() => setStockFilterTab(tab.key)}
-                                          className={`px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9.5px] sm:text-[11px] font-semibold rounded-md transition-all ${
-                                            stockFilterTab === tab.key
-                                              ? 'bg-blue-600 text-white shadow-2xs'
-                                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                          if (detailLoading && (!constituentStocks || constituentStocks.length === 0)) {
+                            return (
+                              <tr className="bg-blue-50/10 dark:bg-blue-950/20 border-b border-slate-100 dark:border-slate-800/60">
+                                <td colSpan={17} className="py-4 text-center text-slate-400 italic text-xs">
+                                  Loading {sector.name} stocks...
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          if (constituentStocks.length === 0) {
+                            return (
+                              <tr className="bg-blue-50/10 dark:bg-blue-950/20 border-b border-slate-100 dark:border-slate-800/60">
+                                <td colSpan={17} className="py-4 text-center text-slate-400 italic text-xs">
+                                  No constituent stocks found for {sector.name}
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          return (
+                            <>
+                              {displayedStocks.map((stock, sIdx) => {
+                                const badge = getStockBadge(stock.symbol);
+                                const stockRets = getMultiPeriodReturns(stock);
+                                const cleanSymbol = (stock.symbol || '').replace('.NS', '').replace('.BO', '');
+
+                                return (
+                                  <tr
+                                    key={stock.symbol || sIdx}
+                                    onClick={() => dispatch(setActiveSymbol(stock.symbol))}
+                                    className="bg-slate-50/30 dark:bg-slate-900/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800/60 transition-colors cursor-pointer group"
+                                  >
+                                    {/* # India Rank */}
+                                    <td className="py-2.5 px-3 text-center font-mono text-[11px] text-slate-400">
+                                      {(stock.indiaStockRank ?? stock.globalRank) != null ? `#${stock.indiaStockRank ?? stock.globalRank}` : '—'}
+                                    </td>
+
+                                    {/* Stock Name + Badge (indented to show hierarchy) */}
+                                    <td className="py-2.5 px-3 pl-8">
+                                      <div className="flex items-center gap-2">
+                                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${badge.bg}`}>
+                                          {badge.letter}
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                          <span className="font-bold text-slate-900 dark:text-slate-100 text-xs group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+                                            {cleanSymbol}
+                                          </span>
+                                          {stock.name && stock.name !== cleanSymbol && (
+                                            <span className="text-[10px] text-slate-400 truncate max-w-[140px]">
+                                              {stock.name}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </td>
+
+                                    {/* Revenue (Current Qtr YoY) */}
+                                    <td className="py-2.5 px-3 text-right">
+                                      {renderRevenueCell(stock)}
+                                    </td>
+
+                                    {/* Up / Down / Total */}
+                                    <td className="py-2.5 px-3 text-center font-mono text-xs text-slate-400">
+                                      —
+                                    </td>
+
+                                    {/* Market Cap (₹ Cr) */}
+                                    <td className="py-2.5 px-3 text-right font-mono text-slate-700 dark:text-slate-300">
+                                      {(stock.marketCapCr ?? (stock.marketCap ? (stock.marketCap > 1e9 ? Math.round(stock.marketCap / 1e7) : stock.marketCap) : null)) != null
+                                        ? formatIndianNumber(stock.marketCapCr ?? (stock.marketCap > 1e9 ? Math.round(stock.marketCap / 1e7) : stock.marketCap), 0, 0)
+                                        : '—'}
+                                    </td>
+
+                                    {/* 52W High / Low */}
+                                    <td className="py-2.5 px-3 text-center font-mono text-[11px] text-slate-700 dark:text-slate-300">
+                                      {renderBaseAthMetrics(stock)}
+                                    </td>
+
+                                    {/* Price (₹) */}
+                                    <td className="py-2.5 px-3 text-right font-mono font-semibold text-slate-900 dark:text-slate-100">
+                                      {(stock.ltp || stock.price) ? formatIndianNumber(stock.ltp || stock.price, 2, 2) : '—'}
+                                    </td>
+
+                                    {/* Multi-Period Performance Subcolumns */}
+                                    {PERIODS.map(p => {
+                                      const sVal = stockRets[p];
+                                      const sPos = sVal !== null && sVal > 0;
+                                      const sNeg = sVal !== null && sVal < 0;
+                                      return (
+                                        <td
+                                          key={p}
+                                          className={`py-2.5 px-1 text-center font-mono font-medium text-[11px] ${
+                                            sPos ? 'text-emerald-600 dark:text-emerald-400' :
+                                            sNeg ? 'text-rose-600 dark:text-rose-400' :
+                                            sVal === 0 ? 'text-slate-600 dark:text-slate-300' :
+                                            'text-slate-400'
                                           }`}
                                         >
-                                          {tab.label}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
+                                          {sVal !== null && !isNaN(sVal) ? `${sPos ? '+' : ''}${sVal.toFixed(2)}%` : '—'}
+                                        </td>
+                                      );
+                                    })}
 
-                                  <div className="flex items-center gap-3">
-                                    {/* Search Stocks in Sector */}
-                                    <div className="relative">
-                                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                                      <input
-                                        type="text"
-                                        placeholder="Search stocks..."
-                                        value={stockSearchQuery}
-                                        onChange={(e) => handleSearchChange(e.target.value)}
-                                        className="pl-8 pr-8 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500 w-52"
-                                      />
-                                      {stockSearchQuery && (
-                                        <button
-                                          onClick={handleClearSearch}
-                                          className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                                          title="Clear search"
-                                        >
-                                          <X size={13} />
-                                        </button>
-                                      )}
-                                    </div>
+                                    {/* P/E */}
+                                    <td className="py-2.5 px-3 text-right font-mono text-slate-700 dark:text-slate-300">
+                                      {stock.pe ? formatIndianNumber(stock.pe, 2, 2) : '—'}
+                                    </td>
 
-                                    <button
-                                      onClick={() => {
-                                        setViewMode('all_stocks');
-                                        setSelectedSectorFilter('all_stocks');
-                                        setCurrentPage(1);
-                                      }}
-                                      className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 shrink-0"
-                                    >
-                                      <span>View All Stocks</span>
-                                      <ArrowRight size={13} />
-                                    </button>
-                                  </div>
-                                </div>
+                                    {/* EPS (₹) */}
+                                    <td className="py-2.5 px-3 text-right font-mono text-slate-700 dark:text-slate-300">
+                                      {stock.eps ? formatIndianNumber(stock.eps, 2, 2) : '—'}
+                                    </td>
 
-                                {/* Nested Constituent Stocks Table (Desktop Layout) */}
-                                <div className="overflow-x-auto">
-                                  <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
-                                    <thead>
-                                      <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
-                                        <th onClick={() => handleGlobalSort('globalRank')} className={`py-2.5 px-3 w-8 text-center cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 transition-colors ${globalSortKey === 'globalRank' ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                                          <div className="flex items-center justify-center gap-0.5">
-                                            <span>#</span>
-                                            {renderSortIndicator('globalRank')}
-                                          </div>
-                                        </th>
-                                        <th onClick={() => handleGlobalSort('stock')} className={`py-2.5 px-3 cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 transition-colors ${globalSortKey === 'stock' ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                                          <div className="flex items-center gap-1">
-                                            <span>Stock</span>
-                                            {renderSortIndicator('stock')}
-                                          </div>
-                                        </th>
-                                        <th onClick={() => handleGlobalSort('revenue')} className={`py-2 px-3 text-right cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 transition-colors ${globalSortKey === 'revenue' ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                                          <div className="flex items-center justify-end gap-1">
-                                            <div>
-                                              <div>Revenue (₹ Cr)</div>
-                                              <div className="text-[9px] font-medium text-slate-400 dark:text-slate-400 normal-case tracking-normal">
-                                                Current Qtr YoY
-                                              </div>
-                                            </div>
-                                            {renderSortIndicator('revenue')}
-                                          </div>
-                                        </th>
-                                        <th onClick={() => handleGlobalSort('marketCap')} className={`py-2.5 px-3 text-right cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 transition-colors ${globalSortKey === 'marketCap' ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                                          <div className="flex items-center justify-end gap-1">
-                                            <span>Market Cap (₹ Cr)</span>
-                                            {renderSortIndicator('marketCap')}
-                                          </div>
-                                        </th>
-                                        <th onClick={() => handleGlobalSort('52w')} className={`py-2 px-3 text-center cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 transition-colors ${globalSortKey === '52w' ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                                          <div className="flex items-center justify-center gap-1">
-                                            <div>
-                                              <div className="font-bold text-slate-700 dark:text-slate-200">
-                                                52W H/L %
-                                              </div>
-                                              <div className="text-[9px] font-medium text-slate-400 dark:text-slate-400 normal-case tracking-normal">
-                                                (Up from 52W Low / Down from ATH)
-                                              </div>
-                                            </div>
-                                            {renderSortIndicator('52w')}
-                                          </div>
-                                        </th>
-                                        <th onClick={() => handleGlobalSort('price')} className={`py-2.5 px-3 text-right cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 transition-colors ${globalSortKey === 'price' ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                                          <div className="flex items-center justify-end gap-1">
-                                            <span>Price (₹)</span>
-                                            {renderSortIndicator('price')}
-                                          </div>
-                                        </th>
+                                    {/* EBIT (₹ Cr) */}
+                                    <td className="py-2.5 px-3 text-right font-mono text-slate-700 dark:text-slate-300">
+                                      {stock.ebit ? formatIndianNumber(stock.ebit, 0, 0) : '—'}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
 
-                                        {/* Performance Subcolumns */}
-                                        <th colSpan={7} className="py-1 px-3 text-center border-l border-r border-slate-200 dark:border-slate-800">
-                                          <div className="text-[10px] font-bold text-slate-700 dark:text-slate-300 pb-0.5">
-                                            Performance (%)
-                                          </div>
-                                          <div className="grid grid-cols-7 gap-1 pt-0.5 border-t border-slate-200 dark:border-slate-800 font-medium text-[9px]">
-                                            {PERIODS.map(p => (
-                                              <span 
-                                                key={p} 
-                                                onClick={(e) => { e.stopPropagation(); handleGlobalSort(`return_${p}`); }}
-                                                className={`cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center justify-center gap-0.5 ${globalSortKey === `return_${p}` ? 'text-blue-600 dark:text-blue-400 font-bold' : ''}`}
-                                              >
-                                                <span>{p}</span>
-                                                {renderSortIndicator(`return_${p}`)}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        </th>
-
-                                        <th onClick={() => handleGlobalSort('pe')} className={`py-2.5 px-3 text-right cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 transition-colors ${globalSortKey === 'pe' ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                                          <div className="flex items-center justify-end gap-1">
-                                            <span>P/E</span>
-                                            {renderSortIndicator('pe')}
-                                          </div>
-                                        </th>
-                                        <th onClick={() => handleGlobalSort('eps')} className={`py-2.5 px-3 text-right cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 transition-colors ${globalSortKey === 'eps' ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                                          <div className="flex items-center justify-end gap-1">
-                                            <span>EPS (₹)</span>
-                                            {renderSortIndicator('eps')}
-                                          </div>
-                                        </th>
-                                        <th onClick={() => handleGlobalSort('ebit')} className={`py-2.5 px-3 text-right cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 transition-colors ${globalSortKey === 'ebit' ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                                          <div className="flex items-center justify-end gap-1">
-                                            <span>EBIT (₹ Cr)</span>
-                                            {renderSortIndicator('ebit')}
-                                          </div>
-                                        </th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-sans">
-                                      {(() => {
-                                        const constituentStocks = getExpandedStocks(sector);
-                                        const displayedStocks = constituentStocks.slice(0, visibleStockCount);
-                                        if (displayedStocks.length === 0) {
-                                          return (
-                                            <tr>
-                                              <td colSpan={17} className="py-8 text-center text-slate-400 italic">
-                                                No stocks found
-                                              </td>
-                                            </tr>
-                                          );
-                                        }
-                                        return displayedStocks.map((stock, sIdx) => {
-                                          const badge = getStockBadge(stock.symbol);
-                                          const stockRets = getMultiPeriodReturns(stock);
-                                          const cleanSymbol = (stock.symbol || '').replace('.NS', '').replace('.BO', '');
-
-                                          return (
-                                            <tr 
-                                              key={stock.symbol || sIdx}
-                                              onClick={() => dispatch(setActiveSymbol(stock.symbol))}
-                                              className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
-                                            >
-                                              {/* # */}
-                                              <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-500 dark:text-slate-400">
-                                                {(stock.indiaStockRank ?? stock.globalRank) !== null && (stock.indiaStockRank ?? stock.globalRank) !== undefined ? `#${stock.indiaStockRank ?? stock.globalRank}` : '—'}
-                                              </td>
-
-                                              {/* Stock Badge + Symbol */}
-                                              <td className="py-2.5 px-3">
-                                                <div className="flex items-center gap-2">
-                                                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${badge.bg}`}>
-                                                    {badge.letter}
-                                                  </div>
-                                                  <div className="flex flex-col">
-                                                    <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">
-                                                      {cleanSymbol}
-                                                    </span>
-                                                    {stock.name && stock.name !== cleanSymbol && (
-                                                      <span className="text-[10px] text-slate-400 truncate max-w-[140px]">
-                                                        {stock.name}
-                                                      </span>
-                                                    )}
-                                                  </div>
-                                                </div>
-                                              </td>
-
-                                              {/* Revenue (Current Qtr YoY) */}
-                                              <td className="py-2.5 px-3 text-right">
-                                                {renderRevenueCell(stock)}
-                                              </td>
-
-                                              {/* Market Cap (₹ Cr) */}
-                                              <td className="py-2.5 px-3 text-right font-mono text-slate-800 dark:text-slate-200">
-                                                {(stock.marketCapCr ?? (stock.marketCap ? (stock.marketCap > 1e9 ? Math.round(stock.marketCap / 10000000) : stock.marketCap) : null)) != null
-                                                  ? formatIndianNumber(stock.marketCapCr ?? (stock.marketCap > 1e9 ? Math.round(stock.marketCap / 10000000) : stock.marketCap), 0, 0)
-                                                  : '—'}
-                                              </td>
-
-                                              {/* Base / ATH Metrics */}
-                                              <td className="py-2.5 px-3 text-center font-mono text-[11px] text-slate-700 dark:text-slate-300">
-                                                {renderBaseAthMetrics(stock)}
-                                              </td>
-
-                                              {/* Price (₹) */}
-                                              <td className="py-2.5 px-3 text-right font-mono font-semibold text-slate-900 dark:text-slate-100">
-                                                {stock.ltp ? formatIndianNumber(stock.ltp, 2, 2) : '—'}
-                                              </td>
-
-                                              {/* Multi-Period Performance Subcolumns */}
-                                              {PERIODS.map(p => {
-                                                const sVal = stockRets[p];
-                                                const sPos = sVal !== null && sVal > 0;
-                                                const sNeg = sVal !== null && sVal < 0;
-                                                return (
-                                                  <td 
-                                                    key={p} 
-                                                    className={`py-2.5 px-1 text-center font-mono font-medium text-[11px] ${
-                                                      sPos ? 'text-emerald-600 dark:text-emerald-400' :
-                                                      sNeg ? 'text-rose-600 dark:text-rose-400' :
-                                                      'text-slate-400'
-                                                    }`}
-                                                  >
-                                                    {sVal !== null ? `${sPos ? '+' : ''}${sVal.toFixed(2)}%` : '—'}
-                                                  </td>
-                                                );
-                                              })}
-
-                                              {/* P/E */}
-                                              <td className="py-2.5 px-3 text-right font-mono text-slate-700 dark:text-slate-300">
-                                                {stock.pe ? formatIndianNumber(stock.pe, 2, 2) : '—'}
-                                              </td>
-
-                                              {/* EPS (₹) */}
-                                              <td className="py-2.5 px-3 text-right font-mono text-slate-700 dark:text-slate-300">
-                                                {stock.eps ? formatIndianNumber(stock.eps, 2, 2) : '—'}
-                                              </td>
-
-                                              {/* EBIT (₹ Cr) */}
-                                              <td className="py-2.5 px-3 text-right font-mono text-slate-700 dark:text-slate-300">
-                                                {stock.ebit ? formatIndianNumber(stock.ebit, 0, 0) : '—'}
-                                              </td>
-                                            </tr>
-                                          );
-                                        });
-                                      })()}
-                                    </tbody>
-                                  </table>
-                                </div>
-
-                                {/* Show More / Show Less */}
-                                {(() => {
-                                  const constituentStocks = getExpandedStocks(sector);
-                                  const totalStocks = constituentStocks.length;
-                                  const displayedCount = Math.min(visibleStockCount, totalStocks);
-
-                                  if (totalStocks <= 5) return null;
-
-                                  return (
-                                    <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
-                                      <span>
-                                        Showing {displayedCount} of {totalStocks} stocks
-                                      </span>
-
-                                      <button
-                                        onClick={() => {
-                                          if (visibleStockCount >= totalStocks) {
-                                            setVisibleStockCount(5);
-                                          } else {
-                                            setVisibleStockCount(prev => Math.min(prev + 10, totalStocks));
-                                          }
-                                        }}
-                                        className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline bg-slate-50 dark:bg-slate-800 px-3 py-1 rounded-md border border-slate-200 dark:border-slate-700"
-                                      >
-                                        <span>{visibleStockCount >= totalStocks ? 'Show Less' : 'Show More'}</span>
-                                        {visibleStockCount >= totalStocks ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                                      </button>
-                                    </div>
-                                  );
-                                })()}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
+                              {/* View All Stocks inline action row */}
+                              <tr className="bg-slate-50/60 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800">
+                                <td colSpan={17} className="py-2.5 px-4 text-left">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedSectorFilter(sector.id);
+                                      setViewMode('all_stocks');
+                                      setCurrentPage(1);
+                                    }}
+                                    className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    <span>View All {constituentStocks.length || sector.totalStocks || constituentList.length} {sector.name} Stocks →</span>
+                                  </button>
+                                </td>
+                              </tr>
+                            </>
+                          );
+                        })()}
                       </React.Fragment>
                     );
                   })
@@ -2729,32 +2604,32 @@ export default function SectorHeatmap() {
             </table>
           </div>
 
-          {/* ── MOBILE TABLE: Remains same for mobile view ── */}
+          {/* ── MOBILE TABLE: Groww-style Compact Screener with Fixed First Column ── */}
           <div className="sm:hidden overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
               <thead>
-                <tr className="bg-slate-50/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[9px]">
-                  {/* Sector - sticky left-0 on mobile */}
-                  <th className="py-2 px-2 text-left sticky left-0 z-20 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 w-[140px] min-w-[140px] max-w-[140px]">
+                <tr className="bg-slate-50/90 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[9px]">
+                  {/* Sector - sticky left-0 on mobile (~30% width) */}
+                  <th className="py-1.5 px-1.5 text-left sticky left-0 z-20 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 w-[75px] min-w-[75px] max-w-[75px] sm:w-[90px] sm:min-w-[90px] sm:max-w-[90px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]">
                     Sector
                   </th>
 
                   {/* 52W H/L % - scrollable */}
-                  <th className="py-2 px-2 text-center border-r border-slate-200 dark:border-slate-800 min-w-[95px]">
-                    <div className="font-bold text-slate-700 dark:text-slate-200 text-[10px]">
+                  <th className="py-1.5 px-1.5 text-center border-r border-slate-200 dark:border-slate-800 min-w-[90px]">
+                    <div className="font-bold text-slate-700 dark:text-slate-200 text-[9.5px]">
                       52W H/L %
                     </div>
-                    <div className="text-[8px] font-medium text-slate-400 dark:text-slate-400 normal-case tracking-normal">
+                    <div className="text-[7.5px] font-medium text-slate-400 dark:text-slate-400 normal-case tracking-normal">
                       (52W L / ATH)
                     </div>
                   </th>
 
                   {/* Performance Header with Subcolumns */}
                   <th colSpan={7} className="py-1 px-1 text-center border-r border-slate-200 dark:border-slate-800">
-                    <div className="text-[9px] font-bold text-slate-700 dark:text-slate-300 pb-0.5">
+                    <div className="text-[8.5px] font-bold text-slate-700 dark:text-slate-300 pb-0.5">
                       Performance (%)
                     </div>
-                    <div className="grid grid-cols-7 gap-0.5 pt-0.5 border-t border-slate-200 dark:border-slate-800 font-medium text-[8px]">
+                    <div className="grid grid-cols-7 gap-0.5 pt-0.5 border-t border-slate-200 dark:border-slate-800 font-medium text-[7.5px]">
                       <span>1W</span>
                       <span>1M</span>
                       <span>6M</span>
@@ -2766,18 +2641,18 @@ export default function SectorHeatmap() {
                   </th>
 
                   {/* Revenue */}
-                  <th className="py-2 px-2.5 text-right min-w-[90px]">
-                    <div>Revenue (₹ Cr)</div>
-                    <div className="text-[8px] font-medium text-slate-400 dark:text-slate-400 normal-case tracking-normal">
+                  <th className="py-1.5 px-2 text-right min-w-[85px]">
+                    <div className="text-[9px]">Revenue (₹ Cr)</div>
+                    <div className="text-[7.5px] font-medium text-slate-400 dark:text-slate-400 normal-case tracking-normal">
                       Current Qtr YoY
                     </div>
                   </th>
 
                   {/* EBIT */}
-                  <th className="py-2.5 px-2.5 text-right">EBIT (₹ Cr)</th>
+                  <th className="py-1.5 px-2 text-right text-[9px]">EBIT (₹ Cr)</th>
 
                   {/* Up / Down / Total */}
-                  <th className="py-2.5 px-2.5 text-center">Up / Down / Total</th>
+                  <th className="py-1.5 px-2 text-center text-[9px]">Up / Down / Total</th>
                 </tr>
               </thead>
 
@@ -2797,17 +2672,17 @@ export default function SectorHeatmap() {
                           isExpanded ? 'bg-blue-50/20 dark:bg-blue-950/10' : ''
                         }`}>
                           {/* Sector Name & Icon + Submetrics (MCap, Price, P/E, EPS) - sticky */}
-                          <td className={`py-2 px-2 sticky left-0 z-10 border-r border-slate-200 dark:border-slate-800 w-[140px] min-w-[140px] max-w-[140px] ${
-                            isExpanded ? 'bg-blue-50 dark:bg-slate-900' : 'bg-white dark:bg-slate-900'
+                          <td className={`py-1.5 px-1.5 sticky left-0 z-10 border-r border-slate-200 dark:border-slate-800 w-[75px] min-w-[75px] max-w-[75px] sm:w-[90px] sm:min-w-[90px] sm:max-w-[90px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)] ${
+                            isExpanded ? 'bg-blue-50/90 dark:bg-slate-900' : 'bg-white dark:bg-slate-900'
                           }`}>
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-mono text-[9px] text-slate-400 font-medium">#{rowIndex}</span>
+                            <div className="flex items-center gap-1 min-w-0">
+                              <span className="font-mono text-[8.5px] text-slate-400 font-medium shrink-0">#{rowIndex}</span>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleToggleExpand(sector.id);
                                 }}
-                                className={`p-1 rounded-md transition-all border flex items-center justify-center shrink-0 ${
+                                className={`p-0.5 rounded transition-all border flex items-center justify-center shrink-0 ${
                                   isExpanded
                                     ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
                                     : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 hover:border-blue-300'
@@ -2816,12 +2691,13 @@ export default function SectorHeatmap() {
                               >
                                 {isExpanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                               </button>
-                              <div className={`w-5 h-5 rounded-md flex items-center justify-center border shrink-0 ${theming.bg}`}>
+                              <div className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 text-[10px] ${theming.bg}`}>
                                 {theming.icon}
                               </div>
                               <button
                                 onClick={() => handleToggleExpand(sector.id)}
-                                className="text-left font-bold text-slate-900 dark:text-slate-100 uppercase tracking-tight text-[11px] hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer truncate max-w-[85px]"
+                                className="text-left font-bold text-slate-900 dark:text-slate-100 uppercase tracking-tight text-[10.5px] hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer truncate"
+                                title={sector.name}
                               >
                                 {sector.name}
                               </button>
@@ -2832,7 +2708,7 @@ export default function SectorHeatmap() {
                           </td>
 
                           {/* 52W H/L % */}
-                          <td className="py-2 px-1 text-center font-mono text-[9px] border-r border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 min-w-[95px]">
+                          <td className="py-1.5 px-1 text-center font-mono text-[8.5px] border-r border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 min-w-[90px]">
                             {renderBaseAthMetrics(sector)}
                           </td>
 
@@ -2844,7 +2720,7 @@ export default function SectorHeatmap() {
                             return (
                               <td 
                                 key={p} 
-                                className={`py-2 px-1 text-center font-mono font-medium text-[9px] ${
+                                className={`py-1.5 px-1 text-center font-mono font-medium text-[8.5px] ${
                                   isPos ? 'text-emerald-600 dark:text-emerald-400' :
                                   isNeg ? 'text-rose-600 dark:text-rose-400' :
                                   'text-slate-400'
@@ -2856,257 +2732,160 @@ export default function SectorHeatmap() {
                           })}
 
                           {/* Revenue (Current Qtr YoY) */}
-                          <td className="py-2 px-2.5 text-right text-[10px]">
+                          <td className="py-1.5 px-2 text-right text-[9.5px]">
                             {renderRevenueCell(sector)}
                           </td>
 
                           {/* EBIT */}
-                          <td className="py-2 px-2.5 text-right font-mono text-slate-700 dark:text-slate-300 text-[9px]">
+                          <td className="py-1.5 px-2 text-right font-mono text-slate-700 dark:text-slate-300 text-[8.5px]">
                             {sector.ebit ? formatIndianNumber(sector.ebit, 0, 0) : '—'}
                           </td>
 
                           {/* Up / Down / Total */}
-                          <td className="py-2 px-2.5 text-center font-mono text-[9px]">
+                          <td className="py-1.5 px-2 text-center font-mono text-[8.5px]">
                             <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{sector.advances || 0}</span>
-                            <span className="text-slate-300 dark:text-slate-600 mx-1">/</span>
+                            <span className="text-slate-300 dark:text-slate-600 mx-0.5">/</span>
                             <span className="text-rose-600 dark:text-rose-400 font-semibold">{sector.declines || 0}</span>
-                            <span className="text-slate-300 dark:text-slate-600 mx-1">/</span>
+                            <span className="text-slate-300 dark:text-slate-600 mx-0.5">/</span>
                             <span className="text-slate-700 dark:text-slate-300 font-semibold">{sector.totalStocks || constituentList.length || 0}</span>
                           </td>
                         </tr>
 
-                        {/* Mobile Inline Accordion Expanded Sector Stocks */}
-                        {isExpanded && (
-                          <tr className="bg-slate-50/70 dark:bg-slate-900/90 border-t border-b border-slate-200 dark:border-slate-800">
-                            <td colSpan={6} className="p-2">
-                              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-sm space-y-3">
-                                {/* Subheader */}
-                                <div className="flex flex-col gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <h3 className="font-bold text-xs text-slate-900 dark:text-slate-100 font-display">
-                                      {sector.name} — <span className="font-mono text-slate-500 font-normal">{getExpandedStocks(sector).length} Stocks</span>
-                                    </h3>
+                        {/* Constituent Stocks (Mobile - rendered directly as sibling <tr> rows without nested card/table) */}
+                        {isExpanded && (() => {
+                          const constituentStocks = getExpandedStocks(sector);
+                          const displayedStocks = constituentStocks.slice(0, 5);
+
+                          if (detailLoading && (!constituentStocks || constituentStocks.length === 0)) {
+                            return (
+                              <tr className="bg-blue-50/10 dark:bg-blue-950/20 border-b border-slate-100 dark:border-slate-800/60">
+                                <td colSpan={12} className="py-3 px-2 text-center text-slate-400 italic text-[10px]">
+                                  Loading {sector.name} stocks...
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          if (constituentStocks.length === 0) {
+                            return (
+                              <tr className="bg-blue-50/10 dark:bg-blue-950/20 border-b border-slate-100 dark:border-slate-800/60">
+                                <td colSpan={12} className="py-3 px-2 text-center text-slate-400 italic text-[10px]">
+                                  No constituent stocks found
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          return (
+                            <>
+                              {displayedStocks.map((stock, sIdx) => {
+                                const badge = getStockBadge(stock.symbol);
+                                const stockRets = getMultiPeriodReturns(stock);
+                                const cleanSymbol = (stock.symbol || '').replace('.NS', '').replace('.BO', '');
+
+                                return (
+                                  <tr 
+                                    key={stock.symbol || sIdx}
+                                    onClick={() => dispatch(setActiveSymbol(stock.symbol))}
+                                    className="bg-slate-50/30 dark:bg-slate-900/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800/60 cursor-pointer transition-colors group"
+                                  >
+                                    {/* Stock Badge + Symbol + Submetrics - sticky */}
+                                    <td className="py-1.5 px-1.5 pl-3 sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 border-r border-slate-200 dark:border-slate-800 w-[75px] min-w-[75px] max-w-[75px] sm:w-[90px] sm:min-w-[90px] sm:max-w-[90px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]">
+                                      <div className="flex items-center gap-1 min-w-0">
+                                        {(stock.indiaStockRank ?? stock.globalRank) != null && (
+                                          <span className="font-mono text-[8.5px] font-bold text-slate-400 shrink-0">
+                                            #{stock.indiaStockRank ?? stock.globalRank}
+                                          </span>
+                                        )}
+                                        <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8.5px] font-bold shrink-0 ${badge.bg}`}>
+                                          {badge.letter}
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                          <span className="font-bold text-slate-900 dark:text-slate-100 text-[10.5px] truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                            {cleanSymbol}
+                                          </span>
+                                          {stock.name && stock.name !== cleanSymbol && (
+                                            <span className="text-[8.5px] text-slate-400 truncate max-w-[45px]">
+                                              {stock.name}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Below Stock Name: MarketCap, Price, P/E, EPS for mobile */}
+                                      {renderSubMetrics(stock, true)}
+                                    </td>
+
+                                    {/* 52W H/L % */}
+                                    <td className="py-1.5 px-1 text-center font-mono text-[8.5px] border-r border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 min-w-[90px]">
+                                      {renderBaseAthMetrics(stock)}
+                                    </td>
+
+                                    {/* Multi-Period Performance Subcolumns */}
+                                    {PERIODS.map(p => {
+                                      const sVal = stockRets[p];
+                                      const sPos = sVal !== null && sVal > 0;
+                                      const sNeg = sVal !== null && sVal < 0;
+                                      return (
+                                        <td 
+                                          key={p} 
+                                          className={`py-1.5 px-1 text-center font-mono font-medium text-[8.5px] ${
+                                            sPos ? 'text-emerald-600 dark:text-emerald-400' :
+                                            sNeg ? 'text-rose-600 dark:text-rose-400' :
+                                            sVal === 0 ? 'text-slate-600 dark:text-slate-300' :
+                                            'text-slate-400'
+                                          }`}
+                                        >
+                                          {sVal !== null && !isNaN(sVal) ? `${sPos ? '+' : ''}${sVal.toFixed(2)}%` : '—'}
+                                        </td>
+                                      );
+                                    })}
+
+                                    {/* Revenue (Current Qtr YoY) */}
+                                    <td className="py-1.5 px-2 text-right text-[9.5px]">
+                                      {renderRevenueCell(stock)}
+                                    </td>
+
+                                    {/* EBIT */}
+                                    <td className="py-1.5 px-2 text-right font-mono text-slate-700 dark:text-slate-300 text-[8.5px]">
+                                      {stock.ebit ? formatIndianNumber(stock.ebit, 0, 0) : '—'}
+                                    </td>
+
+                                    {/* Up / Down / Total */}
+                                    <td className="py-1.5 px-2 text-center font-mono text-[8.5px] text-slate-400">
+                                      —
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+
+                              {/* View All Stocks inline action row */}
+                              <tr className="bg-slate-50/60 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800">
+                                <td colSpan={12} className="py-1.5 px-0 text-left">
+                                  <div className="sticky left-0 inline-block px-3">
                                     <button
-                                      onClick={() => {
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedSectorFilter(sector.id);
                                         setViewMode('all_stocks');
-                                        setSelectedSectorFilter('all_stocks');
                                         setCurrentPage(1);
                                       }}
-                                      className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 shrink-0"
+                                      className="text-[10px] font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors inline-flex items-center gap-1 cursor-pointer"
                                     >
-                                      <span>All Stocks</span>
-                                      <ArrowRight size={11} />
+                                      <span>View All {constituentStocks.length || sector.totalStocks || constituentList.length} {sector.name} Stocks →</span>
                                     </button>
                                   </div>
-
-                                  {/* Filter Tabs */}
-                                  <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 overflow-x-auto">
-                                    {[
-                                      { key: 'all', label: 'All' },
-                                      { key: 'largeCap', label: 'Large' },
-                                      { key: 'midCap', label: 'Mid' },
-                                      { key: 'smallCap', label: 'Small' },
-                                      { key: 'gainers', label: 'Gainers' },
-                                      { key: 'losers', label: 'Losers' },
-                                      { key: 'marketCap', label: 'MCap' }
-                                    ].map(tab => (
-                                      <button
-                                        key={tab.key}
-                                        onClick={() => setStockFilterTab(tab.key)}
-                                        className={`px-2 py-0.5 text-[9.5px] font-semibold rounded-md transition-all whitespace-nowrap ${
-                                          stockFilterTab === tab.key
-                                            ? 'bg-blue-600 text-white shadow-2xs'
-                                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                                        }`}
-                                      >
-                                        {tab.label}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                {/* Nested Constituent Stocks Mobile Table */}
-                                <div className="overflow-x-auto">
-                                  <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
-                                    <thead>
-                                      <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[9px]">
-                                        <th onClick={() => handleGlobalSort('stock')} className={`py-2 px-2 text-left sticky left-0 z-20 bg-slate-50 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-800 w-[140px] min-w-[140px] max-w-[140px] cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 ${globalSortKey === 'stock' ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                                          <div className="flex items-center gap-1">
-                                            <span>Stock</span>
-                                            {renderSortIndicator('stock')}
-                                          </div>
-                                        </th>
-                                        <th onClick={() => handleGlobalSort('52w')} className={`py-2 px-2 text-center border-r border-slate-200 dark:border-slate-800 min-w-[95px] cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 ${globalSortKey === '52w' ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                                          <div className="flex items-center justify-center gap-1">
-                                            <div className="font-bold text-slate-700 dark:text-slate-200 text-[10px]">
-                                              52W H/L %
-                                            </div>
-                                            {renderSortIndicator('52w')}
-                                          </div>
-                                        </th>
-                                        <th colSpan={7} className="py-1 px-1 text-center border-r border-slate-200 dark:border-slate-800">
-                                          <div className="text-[9px] font-bold text-slate-700 dark:text-slate-300 pb-0.5">
-                                            Performance (%)
-                                          </div>
-                                          <div className="grid grid-cols-7 gap-0.5 pt-0.5 border-t border-slate-200 dark:border-slate-800 font-medium text-[8px]">
-                                            {PERIODS.map(p => (
-                                              <span 
-                                                key={p} 
-                                                onClick={(e) => { e.stopPropagation(); handleGlobalSort(`return_${p}`); }}
-                                                className={`cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center justify-center gap-0.5 ${globalSortKey === `return_${p}` ? 'text-blue-600 dark:text-blue-400 font-bold' : ''}`}
-                                              >
-                                                <span>{p}</span>
-                                                {renderSortIndicator(`return_${p}`)}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        </th>
-                                        <th onClick={() => handleGlobalSort('revenue')} className={`py-2 px-2.5 text-right min-w-[90px] cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 ${globalSortKey === 'revenue' ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                                          <div className="flex items-center justify-end gap-1">
-                                            <div>Revenue (₹ Cr)</div>
-                                            {renderSortIndicator('revenue')}
-                                          </div>
-                                        </th>
-                                        <th onClick={() => handleGlobalSort('ebit')} className={`py-2 px-2.5 text-right cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 ${globalSortKey === 'ebit' ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                                          <div className="flex items-center justify-end gap-1">
-                                            <span>EBIT (₹ Cr)</span>
-                                            {renderSortIndicator('ebit')}
-                                          </div>
-                                        </th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-sans">
-                                      {(() => {
-                                        const constituentStocks = getExpandedStocks(sector);
-                                        const displayedStocks = constituentStocks.slice(0, visibleStockCount);
-                                        if (displayedStocks.length === 0) {
-                                          return (
-                                            <tr>
-                                              <td colSpan={11} className="py-6 text-center text-slate-400 italic">
-                                                No stocks found
-                                              </td>
-                                            </tr>
-                                          );
-                                        }
-                                        return displayedStocks.map((stock, sIdx) => {
-                                          const badge = getStockBadge(stock.symbol);
-                                          const stockRets = getMultiPeriodReturns(stock);
-                                          const cleanSymbol = (stock.symbol || '').replace('.NS', '').replace('.BO', '');
-
-                                          return (
-                                            <tr 
-                                              key={stock.symbol || sIdx}
-                                              onClick={() => dispatch(setActiveSymbol(stock.symbol))}
-                                              className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
-                                            >
-                                              {/* Stock Badge + Symbol + Submetrics - sticky */}
-                                              <td className="py-2 px-2 sticky left-0 z-10 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 w-[140px] min-w-[140px] max-w-[140px]">
-                                                <div className="flex items-center gap-1.5">
-                                                  {(stock.indiaStockRank ?? stock.globalRank) != null && (
-                                                    <span className="font-mono text-[9px] font-bold text-slate-400">
-                                                      #{stock.indiaStockRank ?? stock.globalRank}
-                                                    </span>
-                                                  )}
-                                                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${badge.bg}`}>
-                                                    {badge.letter}
-                                                  </div>
-                                                  <div className="flex flex-col min-w-0">
-                                                    <span className="font-bold text-slate-900 dark:text-slate-100 text-[11px] truncate">
-                                                      {cleanSymbol}
-                                                    </span>
-                                                    {stock.name && stock.name !== cleanSymbol && (
-                                                      <span className="text-[9px] text-slate-400 truncate max-w-[85px]">
-                                                        {stock.name}
-                                                      </span>
-                                                    )}
-                                                  </div>
-                                                </div>
-
-                                                {/* Below Stock Name: MarketCap, Price, P/E, EPS for mobile */}
-                                                {renderSubMetrics(stock, true)}
-                                              </td>
-
-                                              {/* 52W H/L % */}
-                                              <td className="py-2 px-1 text-center font-mono text-[9px] border-r border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 min-w-[95px]">
-                                                {renderBaseAthMetrics(stock)}
-                                              </td>
-
-                                              {/* Multi-Period Performance Subcolumns */}
-                                              {PERIODS.map(p => {
-                                                const sVal = stockRets[p];
-                                                const sPos = sVal !== null && sVal > 0;
-                                                const sNeg = sVal !== null && sVal < 0;
-                                                return (
-                                                  <td 
-                                                    key={p} 
-                                                    className={`py-2 px-1 text-center font-mono font-medium text-[9px] ${
-                                                      sPos ? 'text-emerald-600 dark:text-emerald-400' :
-                                                      sNeg ? 'text-rose-600 dark:text-rose-400' :
-                                                      'text-slate-400'
-                                                    }`}
-                                                  >
-                                                    {sVal !== null ? `${sPos ? '+' : ''}${sVal.toFixed(2)}%` : '—'}
-                                                  </td>
-                                                );
-                                              })}
-
-                                              {/* Revenue (Current Qtr YoY) */}
-                                              <td className="py-2 px-2.5 text-right text-[10px]">
-                                                {renderRevenueCell(stock)}
-                                              </td>
-
-                                              {/* EBIT */}
-                                              <td className="py-2 px-2.5 text-right font-mono text-slate-700 dark:text-slate-300 text-[9px]">
-                                                {stock.ebit ? formatIndianNumber(stock.ebit, 0, 0) : '—'}
-                                              </td>
-                                            </tr>
-                                          );
-                                        });
-                                      })()}
-                                    </tbody>
-                                  </table>
-                                </div>
-
-                                {/* Show More / Show Less */}
-                                {(() => {
-                                  const constituentStocks = getExpandedStocks(sector);
-                                  const totalStocks = constituentStocks.length;
-                                  const displayedCount = Math.min(visibleStockCount, totalStocks);
-
-                                  if (totalStocks <= 5) return null;
-
-                                  return (
-                                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500">
-                                      <span>
-                                        {displayedCount} of {totalStocks}
-                                      </span>
-
-                                      <button
-                                        onClick={() => {
-                                          if (visibleStockCount >= totalStocks) {
-                                            setVisibleStockCount(5);
-                                          } else {
-                                            setVisibleStockCount(prev => Math.min(prev + 10, totalStocks));
-                                          }
-                                        }}
-                                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700"
-                                      >
-                                        <span>{visibleStockCount >= totalStocks ? 'Less' : 'More'}</span>
-                                        {visibleStockCount >= totalStocks ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-                                      </button>
-                                    </div>
-                                  );
-                                })()}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
+                                </td>
+                              </tr>
+                            </>
+                          );
+                        })()}
                       </React.Fragment>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-400 italic">
+                    <td colSpan={12} className="py-12 text-center text-slate-400 italic">
                       {loading ? 'Loading sectors performance data...' : 'No sector data available matching your criteria.'}
                     </td>
                   </tr>

@@ -82,7 +82,7 @@ class StockWeightageService {
       totalDiscovered: 2125,
       eligibleDirectGrowth: 2125,
       targetCategoryTotal: 228,
-      categories: { 'Large Cap': 35, 'Mid Cap': 84, 'Small Cap': 65, 'Contra': 4, 'Value': 40 },
+      categories: { 'Large & Mid Cap': 36, 'Large Cap': 35, 'Mid Cap': 84, 'Small Cap': 65, 'Multi Cap': 32, 'Flexi Cap': 46, 'Contra': 4, 'Value': 40 },
       uniqueAmcs: 43
     };
     this.initialized = false;
@@ -94,11 +94,74 @@ class StockWeightageService {
     // Strictly isolate non-pure equity funds: ELSS, Sectoral, Hybrid, Index, Debt
     if (/elss|tax\s*saver|tax-saver|sector|thematic|hybrid|arbitrage|index|etf|fmp|debt|liquid/i.test(c)) return null;
     if (/contra/i.test(c)) return 'Contra';
-    if ((/small\s*cap/i.test(c) || /small\s*cap/i.test(name)) && !/mid/i.test(name)) return 'Small Cap';
-    if ((/mid\s*cap/i.test(c) || /mid\s*cap/i.test(name)) && !/large\s*(&|and)\s*mid/i.test(c) && !/large\s*(&|and)\s*mid/i.test(name)) return 'Mid Cap';
+    if (/large\s*(&|and)\s*mid/i.test(c)) return 'Large & Mid Cap';
+    if (/flexi\s*cap/i.test(c)) return 'Flexi Cap';
+    if (/multi\s*cap/i.test(c)) return 'Multi Cap';
+    if ((/small\s*cap/i.test(c) || /small\s*cap/i.test(name) || /smallcap/i.test(c)) && !/mid/i.test(name)) return 'Small Cap';
+    if ((/mid\s*cap/i.test(c) || /mid\s*cap/i.test(name) || /emerging/i.test(name) || /midcap/i.test(c)) && !/large\s*(&|and)\s*mid/i.test(c) && !/large\s*(&|and)\s*mid/i.test(name)) return 'Mid Cap';
     if ((/large\s*cap/i.test(c) || /large\s*cap/i.test(name) || /bluechip/i.test(name) || /top 100/i.test(name)) && !/large\s*(&|and)\s*mid/i.test(c) && !/large\s*(&|and)\s*mid/i.test(name)) return 'Large Cap';
     if ((/value/i.test(c) || /value/i.test(name)) && !/large\s*(&|and)\s*mid/i.test(c)) return 'Value';
     return null;
+  }
+
+  matchesCategoryFilter(schemeOrFund, categoryFilter) {
+    if (!categoryFilter || categoryFilter === 'all' || categoryFilter === 'All Funds') {
+      return true;
+    }
+    const catNorm = String(categoryFilter).toLowerCase().replace(/funds?/g, '').replace(/\(combined holdings\)/g, '').trim();
+    const target = (schemeOrFund.targetCategory || '').toLowerCase();
+    const rawCat = (schemeOrFund.category || '').toLowerCase();
+    const name = (schemeOrFund.schemeName || schemeOrFund.name || '').toLowerCase();
+
+    // 1. Merged Large & Mid Cap filter (includes Large & Mid Cap, Large Cap, Mid Cap, Multi Cap, and Flexi Cap):
+    if (catNorm === 'large & mid cap' || catNorm === 'large & mid' || catNorm === 'large and mid cap' || catNorm === 'large and mid' || catNorm === 'large cap + mid cap') {
+      return target === 'large & mid cap' || target === 'large cap' || target === 'mid cap' || target === 'flexi cap' || target === 'multi cap' ||
+             rawCat.includes('large & mid') || rawCat.includes('large and mid') || rawCat.includes('large cap') || rawCat.includes('mid cap') ||
+             name.includes('large & mid') || name.includes('large and mid') || name.includes('large cap') || name.includes('mid cap') || name.includes('bluechip');
+    }
+
+    // 2. Small Cap filter (includes Small Cap, Multi Cap, and Flexi Cap):
+    if (catNorm.includes('small')) {
+      return target === 'small cap' || target === 'flexi cap' || target === 'multi cap' ||
+             rawCat.includes('small cap') || rawCat.includes('smallcap') ||
+             name.includes('small cap') || name.includes('smallcap');
+    }
+
+    // 3. Pure Large Cap query (backward compatibility):
+    if (catNorm.includes('large') && !catNorm.includes('mid')) {
+      return (target === 'large cap' || target === 'flexi cap' || target === 'multi cap' ||
+              rawCat.includes('large cap') || name.includes('large cap') || name.includes('bluechip') || name.includes('top 100')) &&
+             !target.includes('mid') && !rawCat.includes('mid') && !name.includes('mid');
+    }
+
+    // 4. Pure Mid Cap query (backward compatibility):
+    if (catNorm.includes('mid') && !catNorm.includes('large')) {
+      return (target === 'mid cap' || target === 'flexi cap' || target === 'multi cap' ||
+              rawCat.includes('mid cap') || rawCat.includes('midcap') || name.includes('mid cap') || name.includes('midcap')) &&
+             !target.includes('large') && !rawCat.includes('large') && !name.includes('large');
+    }
+
+    // 5. Contra filter:
+    if (catNorm.includes('contra')) {
+      return target === 'contra' || rawCat.includes('contra') || name.includes('contra');
+    }
+
+    // 6. Value filter:
+    if (catNorm.includes('value')) {
+      return target === 'value' || rawCat.includes('value') || name.includes('value');
+    }
+
+    // 7. Multi Cap explicit query:
+    if (catNorm.includes('multi')) {
+      return target === 'multi cap' || rawCat.includes('multi cap') || name.includes('multi cap') || name.includes('multicap');
+    }
+
+    // 8. Flexi Cap explicit query:
+    if (catNorm.includes('flexi')) {
+      return target === 'flexi cap' || rawCat.includes('flexi cap') || name.includes('flexi cap') || name.includes('flexicap');
+    }
+
+    return target === catNorm || rawCat.includes(catNorm) || name.includes(catNorm);
   }
 
   isEligibleScreenerFund(fund) {
@@ -170,7 +233,10 @@ class StockWeightageService {
             for (const item of list) {
               if (item.isin && item.symbol) {
                 const isinKey = item.isin.trim().toUpperCase();
-                const symKey = item.symbol.trim().toUpperCase();
+                let symKey = item.symbol.trim().toUpperCase();
+                if (isinKey === 'INE155A01022') symKey = 'TATAMOTORS';
+                if (isinKey === 'INE214T01019') symKey = 'LTIM';
+
                 const entry = {
                   symbol: symKey,
                   isin: isinKey,
@@ -180,7 +246,10 @@ class StockWeightageService {
                 if (!this.bseScripMap.has(symKey)) {
                   this.bseScripMap.set(symKey, entry);
                 }
-                this.bseScripMap.set(isinKey, entry);
+                const existing = this.bseScripMap.get(isinKey);
+                if (!existing || isinKey === 'INE155A01022' || isinKey === 'INE214T01019') {
+                  this.bseScripMap.set(isinKey, entry);
+                }
               }
             }
             console.log(`⚡ StockWeightageService: Loaded ${list.length} securities from equity master (${p})`);
@@ -425,7 +494,16 @@ class StockWeightageService {
     }
 
     const uniqueAmcs = new Set();
-    const catCounts = { 'Large Cap': 0, 'Mid Cap': 0, 'Small Cap': 0, 'Contra': 0, 'Value': 0 };
+    const catCounts = {
+      'Large & Mid Cap': 0,
+      'Large Cap': 0,
+      'Mid Cap': 0,
+      'Small Cap': 0,
+      'Multi Cap': 0,
+      'Flexi Cap': 0,
+      'Contra': 0,
+      'Value': 0
+    };
 
     for (const rawScheme of rawSchemesList) {
       const eligibility = this.isEligibleScreenerFund(rawScheme);
@@ -473,7 +551,7 @@ class StockWeightageService {
       uniqueAmcs: uniqueAmcs.size
     };
 
-    console.log(`⚡ StockWeightageService: Discovered ${this.eligibleFundUniverseMap.size} eligible Direct Growth funds across ${uniqueAmcs.size} AMCs in 5 target categories (Large: ${catCounts['Large Cap']}, Mid: ${catCounts['Mid Cap']}, Small: ${catCounts['Small Cap']}, Contra: ${catCounts['Contra']}, Value: ${catCounts['Value']})`);
+    console.log(`⚡ StockWeightageService: Discovered ${this.eligibleFundUniverseMap.size} eligible Direct Growth funds across ${uniqueAmcs.size} AMCs (Large & Mid: ${catCounts['Large & Mid Cap']}, Large: ${catCounts['Large Cap']}, Mid: ${catCounts['Mid Cap']}, Small: ${catCounts['Small Cap']}, Multi: ${catCounts['Multi Cap']}, Flexi: ${catCounts['Flexi Cap']}, Contra: ${catCounts['Contra']}, Value: ${catCounts['Value']})`);
 
     // 2. Ingest verified statutory portfolio disclosures from multi-tier pipeline
     // (A) Load verified holdings cache (covering 31+ AMCs: SBI, ICICI, Nippon, Axis, Kotak, Tata, DSP, etc.)
@@ -545,9 +623,15 @@ class StockWeightageService {
           }
         }
         rawSymbol = rawSymbol || pos.stock || pos.symbol || 'UNKNOWN';
-        const symbol = rawSymbol.replace(/\.BO$|\.NS$|\.B$/i, '').trim();
+        let symbol = rawSymbol.replace(/\.BO$|\.NS$|\.B$/i, '').trim();
         const isin = stockIdentity.isin || pos.ISIN || pos.securityId || pos.isin || null;
         const companyName = stockIdentity.companyName || pos.name || pos.stock || pos.stockName;
+
+        if (isin === 'INE155A01022' || symbol === 'TMPV' || symbol === 'TMCV') {
+          symbol = 'TATAMOTORS';
+        } else if (isin === 'INE214T01019' || symbol === 'LTM') {
+          symbol = 'LTIM';
+        }
 
         const weightPct = typeof pos.weightPercent === 'number' ? pos.weightPercent : (typeof pos.weightPct === 'number' ? pos.weightPct : 0);
         const valueCr = typeof pos.valueCr === 'number' ? pos.valueCr : (typeof pos.marketValueCr === 'number' ? pos.marketValueCr : null);
@@ -571,10 +655,16 @@ class StockWeightageService {
 
         schemeEntry.positions.push(positionRecord);
 
-        // Index by stock symbol
-        const stockKey = symbol.toUpperCase();
-        if (!this.stockMap.has(stockKey)) {
-          this.stockMap.set(stockKey, {
+        // Deduplication: look up by ISIN first if available, otherwise by symbol
+        let stockObj = null;
+        if (isin && this.stockByIsinMap.has(isin)) {
+          stockObj = this.stockByIsinMap.get(isin);
+        } else if (this.stockMap.has(symbol.toUpperCase())) {
+          stockObj = this.stockMap.get(symbol.toUpperCase());
+        }
+
+        if (!stockObj) {
+          stockObj = {
             symbol,
             isin,
             name: companyName,
@@ -583,15 +673,28 @@ class StockWeightageService {
             industry: pos.industry || 'General',
             rawSector: (pos.sector && pos.sector !== 'General' && pos.sector !== 'Other' && pos.sector !== 'Diversified / Industrial') ? pos.sector : null,
             holdingSchemes: []
-          });
+          };
+          this.stockMap.set(symbol.toUpperCase(), stockObj);
+          if (isin) {
+            this.stockByIsinMap.set(isin, stockObj);
+          }
         } else {
-          const s = this.stockMap.get(stockKey);
-          if (!s.rawSector && pos.sector && pos.sector !== 'General' && pos.sector !== 'Other' && pos.sector !== 'Diversified / Industrial') {
-            s.rawSector = pos.sector;
+          if (!stockObj.rawSector && pos.sector && pos.sector !== 'General' && pos.sector !== 'Other' && pos.sector !== 'Diversified / Industrial') {
+            stockObj.rawSector = pos.sector;
+          }
+          if (isin && !stockObj.isin) {
+            stockObj.isin = isin;
+            this.stockByIsinMap.set(isin, stockObj);
+          }
+          if ((stockObj.symbol.length > symbol.length && !stockObj.symbol.includes('-')) || isIsinCode(stockObj.symbol)) {
+            stockObj.symbol = symbol;
           }
         }
 
-        const stockObj = this.stockMap.get(stockKey);
+        this.stockMap.set(symbol.toUpperCase(), stockObj);
+        if (stockObj.symbol) {
+          this.stockMap.set(stockObj.symbol.toUpperCase(), stockObj);
+        }
         // Deduplicate multiple tranches within the same scheme
         const existingFundIdx = stockObj.holdingSchemes.findIndex(h => h.schemeCode === schemeEntry.schemeCode);
         if (existingFundIdx === -1) {
@@ -677,7 +780,7 @@ class StockWeightageService {
     }
 
     // 4. Pre-warm screener aggregation cache for target categories for instant performance
-    for (const cat of ['All Funds', 'Large Cap', 'Mid Cap', 'Small Cap', 'Contra', 'Value']) {
+    for (const cat of ['All Funds', 'Large & Mid Cap', 'Small Cap', 'Contra', 'Value', 'Large Cap', 'Mid Cap']) {
       this._computeBaseAggregation(cat, 'all');
     }
 
@@ -696,17 +799,7 @@ class StockWeightageService {
     // 0. Filter eligible Direct + Growth universe to calculate accurate universe denominators
     const matchesEligibilityFilter = (fund) => {
       if (category && category !== 'all' && category !== 'All Funds') {
-        const catNorm = String(category).toLowerCase().replace(/funds?/g, '').trim();
-        const target = (fund.targetCategory || '').toLowerCase();
-        const rawCat = (fund.category || '').toLowerCase();
-        const name = (fund.schemeName || '').toLowerCase();
-        const matches = (catNorm.includes('large') && !catNorm.includes('mid') && (target === 'large cap' || rawCat.includes('large cap') || name.includes('large cap') || name.includes('bluechip'))) ||
-                        (catNorm.includes('mid') && (target === 'mid cap' || rawCat.includes('mid cap') || name.includes('mid cap') || name.includes('midcap'))) ||
-                        (catNorm.includes('small') && (target === 'small cap' || rawCat.includes('small cap') || name.includes('small cap') || name.includes('smallcap'))) ||
-                        (catNorm.includes('contra') && (target === 'contra' || rawCat.includes('contra') || name.includes('contra'))) ||
-                        (catNorm.includes('value') && (target === 'value' || rawCat.includes('value') || name.includes('value'))) ||
-                        (target.includes(catNorm) || rawCat.includes(catNorm) || name.includes(catNorm));
-        if (!matches) return false;
+        if (!this.matchesCategoryFilter(fund, category)) return false;
       }
       if (amc && amc !== 'all') {
         if (!String(fund.amc || '').toLowerCase().includes(amc.toLowerCase())) return false;
@@ -722,7 +815,7 @@ class StockWeightageService {
 
     // Eligible funds for which verified holdings disclosure was obtained & parsed
     const verifiedInEligible = eligibleFilteredFunds.filter(f => f.holdingsAvailable || this.schemeMap.has(f.schemeCode)).length;
-    // If 'all' funds selected, expose the 211 verified mutual fund portfolios indexed in the screener
+    // If 'all' funds selected, expose the verified mutual fund portfolios indexed in the screener
     const fundsWithVerifiedHoldings = isAllCategory ? Math.max(this.schemeMap.size, verifiedInEligible) : verifiedInEligible;
     const holdingsCoveragePct = eligibleUniverseFunds > 0 ? parseFloat(((fundsWithVerifiedHoldings / eligibleUniverseFunds) * 100).toFixed(2)) : 0;
 
@@ -743,17 +836,7 @@ class StockWeightageService {
 
     const matchesSchemeFilter = (scheme) => {
       if (category && category !== 'all' && category !== 'All Funds') {
-        const catNorm = String(category).toLowerCase().replace(/funds?/g, '').trim();
-        const target = (scheme.targetCategory || '').toLowerCase();
-        const rawCat = (scheme.category || '').toLowerCase();
-        const name = (scheme.schemeName || '').toLowerCase();
-        const matches = (catNorm.includes('large') && !catNorm.includes('mid') && (target === 'large cap' || rawCat.includes('large cap') || name.includes('large cap') || name.includes('bluechip'))) ||
-                        (catNorm.includes('mid') && (target === 'mid cap' || rawCat.includes('mid cap') || name.includes('mid cap') || name.includes('midcap'))) ||
-                        (catNorm.includes('small') && (target === 'small cap' || rawCat.includes('small cap') || name.includes('small cap') || name.includes('smallcap'))) ||
-                        (catNorm.includes('contra') && (target === 'contra' || rawCat.includes('contra') || name.includes('contra'))) ||
-                        (catNorm.includes('value') && (target === 'value' || rawCat.includes('value') || name.includes('value'))) ||
-                        (target.includes(catNorm) || rawCat.includes(catNorm) || name.includes(catNorm));
-        if (!matches) return false;
+        if (!this.matchesCategoryFilter(scheme, category)) return false;
       }
       if (amc && amc !== 'all') {
         if (!String(scheme.amc || '').toLowerCase().includes(amc.toLowerCase())) return false;
@@ -766,34 +849,44 @@ class StockWeightageService {
       schemesCountedSet.add(scheme.schemeCode);
     }
 
-    for (const stock of this.stockMap.values()) {
+    // Deduplicate distinct stock objects to avoid duplicate rows
+    const uniqueStocks = Array.from(new Set(this.stockMap.values()));
+    for (const stock of uniqueStocks) {
       if (!stock.holdingSchemes || stock.holdingSchemes.length === 0) continue;
 
       // Filter holding schemes if category or amc filter is set
       let relevantSchemes = stock.holdingSchemes;
       if (category && category !== 'all' && category !== 'All Funds') {
         const catNorm = String(category).toLowerCase().replace(/funds?/g, '').trim();
-        relevantSchemes = relevantSchemes.filter(s => {
-          const target = (s.targetCategory || '').toLowerCase();
-          const rawCat = (s.category || '').toLowerCase();
-          const name = (s.schemeName || '').toLowerCase();
-          if (catNorm.includes('large') && !catNorm.includes('mid')) {
-            return target === 'large cap' || rawCat.includes('large cap') || name.includes('large cap') || name.includes('bluechip');
-          }
-          if (catNorm.includes('mid')) {
-            return target === 'mid cap' || rawCat.includes('mid cap') || name.includes('mid cap') || name.includes('midcap');
-          }
-          if (catNorm.includes('small')) {
-            return target === 'small cap' || rawCat.includes('small cap') || name.includes('small cap') || name.includes('smallcap');
-          }
-          if (catNorm.includes('contra')) {
-            return target === 'contra' || rawCat.includes('contra') || name.includes('contra');
-          }
-          if (catNorm.includes('value')) {
-            return target === 'value' || rawCat.includes('value') || name.includes('value');
-          }
-          return target.includes(catNorm) || rawCat.includes(catNorm) || name.includes(catNorm);
-        });
+
+        // Stock-level relevance check:
+        // Ensure only stocks genuinely relevant to the selected category are shown
+        if (catNorm === 'large & mid cap' || catNorm === 'large & mid' || catNorm === 'large and mid cap' || catNorm === 'large and mid' || catNorm === 'large cap + mid cap') {
+          // Stock must be held by at least one Large Cap, Mid Cap, or Large & Mid Cap fund
+          const hasLargeOrMidFund = stock.holdingSchemes.some(s => {
+            const t = (s.targetCategory || '').toLowerCase();
+            return t === 'large cap' || t === 'mid cap' || t === 'large & mid cap';
+          });
+          if (!hasLargeOrMidFund) continue;
+        } else if (catNorm.includes('small')) {
+          // Stock must be held by at least one Small Cap fund
+          const hasSmallFund = stock.holdingSchemes.some(s => (s.targetCategory || '').toLowerCase() === 'small cap');
+          if (!hasSmallFund) continue;
+        } else if (catNorm.includes('contra')) {
+          const hasContraFund = stock.holdingSchemes.some(s => (s.targetCategory || '').toLowerCase() === 'contra');
+          if (!hasContraFund) continue;
+        } else if (catNorm.includes('value')) {
+          const hasValueFund = stock.holdingSchemes.some(s => (s.targetCategory || '').toLowerCase() === 'value');
+          if (!hasValueFund) continue;
+        } else if (catNorm.includes('large') && !catNorm.includes('mid')) {
+          const hasLargeFund = stock.holdingSchemes.some(s => (s.targetCategory || '').toLowerCase() === 'large cap');
+          if (!hasLargeFund) continue;
+        } else if (catNorm.includes('mid') && !catNorm.includes('large')) {
+          const hasMidFund = stock.holdingSchemes.some(s => (s.targetCategory || '').toLowerCase() === 'mid cap');
+          if (!hasMidFund) continue;
+        }
+
+        relevantSchemes = relevantSchemes.filter(s => this.matchesCategoryFilter(s, category));
       }
       if (amc && amc !== 'all') {
         relevantSchemes = relevantSchemes.filter(s => 
@@ -1639,29 +1732,7 @@ class StockWeightageService {
 
     // Category filter
     if (category && category !== 'all' && category !== 'All Funds') {
-      const catNorm = String(category).toLowerCase().replace(/funds?/g, '').trim();
-      funds = funds.filter(f => {
-        const target = (f.targetCategory || '').toLowerCase();
-        const rawCat = (f.category || '').toLowerCase();
-        const name = (f.schemeName || '').toLowerCase();
-
-        if (catNorm.includes('large') && !catNorm.includes('mid')) {
-          return target === 'large cap' || rawCat.includes('large cap') || name.includes('large cap') || name.includes('bluechip');
-        }
-        if (catNorm.includes('mid')) {
-          return target === 'mid cap' || rawCat.includes('mid cap') || name.includes('mid cap') || name.includes('midcap');
-        }
-        if (catNorm.includes('small')) {
-          return target === 'small cap' || rawCat.includes('small cap') || name.includes('small cap') || name.includes('smallcap');
-        }
-        if (catNorm.includes('contra')) {
-          return target === 'contra' || rawCat.includes('contra') || name.includes('contra');
-        }
-        if (catNorm.includes('value')) {
-          return target === 'value' || rawCat.includes('value') || name.includes('value');
-        }
-        return target.includes(catNorm) || rawCat.includes(catNorm) || name.includes(catNorm);
-      });
+      funds = funds.filter(f => this.matchesCategoryFilter(f, category));
     }
 
     // Search filter
@@ -1867,9 +1938,12 @@ class StockWeightageService {
 
     // Compute category-wise holdings coverage
     const categoryCoverage = {
+      'Large & Mid Cap': { totalEligible: 0, withVerifiedHoldings: 0, awaitingPublication: 0 },
       'Large Cap': { totalEligible: 0, withVerifiedHoldings: 0, awaitingPublication: 0 },
       'Mid Cap': { totalEligible: 0, withVerifiedHoldings: 0, awaitingPublication: 0 },
       'Small Cap': { totalEligible: 0, withVerifiedHoldings: 0, awaitingPublication: 0 },
+      'Multi Cap': { totalEligible: 0, withVerifiedHoldings: 0, awaitingPublication: 0 },
+      'Flexi Cap': { totalEligible: 0, withVerifiedHoldings: 0, awaitingPublication: 0 },
       'Contra': { totalEligible: 0, withVerifiedHoldings: 0, awaitingPublication: 0 },
       'Value': { totalEligible: 0, withVerifiedHoldings: 0, awaitingPublication: 0 }
     };
@@ -1900,9 +1974,12 @@ class StockWeightageService {
         eligibleDirectGrowthSchemes: this.universeStats.eligibleDirectGrowth,
         targetCategoryUniverse: {
           total: this.universeStats.targetCategoryTotal,
+          largeAndMidCap: this.universeStats.categories['Large & Mid Cap'] || 0,
           largeCap: this.universeStats.categories['Large Cap'] || 0,
           midCap: this.universeStats.categories['Mid Cap'] || 0,
           smallCap: this.universeStats.categories['Small Cap'] || 0,
+          multiCap: this.universeStats.categories['Multi Cap'] || 0,
+          flexiCap: this.universeStats.categories['Flexi Cap'] || 0,
           contra: this.universeStats.categories['Contra'] || 0,
           value: this.universeStats.categories['Value'] || 0
         },

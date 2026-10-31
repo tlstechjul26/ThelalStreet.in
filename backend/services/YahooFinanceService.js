@@ -330,6 +330,9 @@ class YahooFinanceService {
 
         const result = { returns, athBase };
         this.historicalCache.set(yahooSym, { data: result, timestamp: Date.now() });
+        const cleanSym = yahooSym.replace(/\.(NS|BO)$/i, '');
+        this.historicalCache.set(cleanSym, { data: result, timestamp: Date.now() });
+        this.historicalCache.set(`${cleanSym}.NS`, { data: result, timestamp: Date.now() });
         if (athBase && athBase.allTimeHigh !== null) {
           athBaseService.cache.set(`ATH_52W_V5:${yahooSym.toUpperCase()}`, { data: athBase, timestamp: Date.now() });
         }

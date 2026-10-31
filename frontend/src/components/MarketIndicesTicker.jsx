@@ -31,13 +31,13 @@ export default function MarketIndicesTicker() {
   });
 
   const renderItem = (item, i) => (
-    <div key={`${item.label}-${i}`} className="inline-flex items-center gap-3 px-5 py-1.5 whitespace-nowrap">
-      <span className="font-medium text-xs" style={{ color: 'var(--text-secondary)' }}>{item.label}</span>
-      <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{item.value}</span>
-      <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${item.changePercent >= 0 ? 'text-gain' : 'text-loss'}`}>
+    <div key={`${item.label}-${i}`} className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-0.5 whitespace-nowrap">
+      <span className="font-medium text-[9px] sm:text-[10px]" style={{ color: 'var(--text-secondary)' }}>{item.label}</span>
+      <span className="text-[9.5px] sm:text-[10.5px] font-semibold" style={{ color: 'var(--text-primary)' }}>{item.value}</span>
+      <span className={`inline-flex items-center gap-0.5 text-[8.5px] sm:text-[9.5px] font-medium ${item.changePercent >= 0 ? 'text-gain' : 'text-loss'}`}>
         {item.changePercent >= 0 
-          ? <TrendingUp size={11} /> 
-          : <TrendingDown size={11} />
+          ? <TrendingUp size={8} /> 
+          : <TrendingDown size={8} />
         }
         {item.changePercent >= 0 ? '+' : ''}{item.changePercent.toFixed(2)}%
       </span>

@@ -615,7 +615,7 @@ export default function MfRankingTable({
 
   const totalPages = Math.ceil(allRankedFunds.length / pageSize) || 1;
 
-  const renderSortHeader = (label, field, alignment = 'text-right') => {
+  const renderSortHeader = (label, field, alignment = 'text-right', extraClass = '') => {
     const sortIndex = sortCriteria.findIndex(c => c.field === field);
     const isSorted = sortIndex !== -1;
     const activeCriterion = isSorted ? sortCriteria[sortIndex] : null;
@@ -626,8 +626,8 @@ export default function MfRankingTable({
       <th
         onClick={() => handleSort(field)}
         className={`py-2 md:py-3 px-1.5 md:px-2 font-bold text-[9px] md:text-[10.5px] uppercase cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap ${alignment} ${
-          isSorted ? 'text-blue-600 dark:text-blue-400 bg-slate-50 dark:bg-slate-900/80' : 'text-slate-500 dark:text-slate-400'
-        }`}
+          isSorted ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'
+        } ${extraClass ? extraClass : (isSorted ? 'bg-slate-50 dark:bg-slate-900/80' : '')}`}
       >
         <div className={`flex items-center gap-1 ${alignment === 'text-right' ? 'justify-end' : alignment === 'text-center' ? 'justify-center' : 'justify-start'}`}>
           <span>{label}</span>
@@ -725,20 +725,20 @@ export default function MfRankingTable({
         className="border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-900/60 transition-colors cursor-pointer group"
       >
         {/* Numerical Rank # Column */}
-        <td className="py-1.5 md:py-2.5 px-1.5 md:px-3 text-center align-middle font-mono text-[10px] md:text-[11px] font-medium text-slate-500 dark:text-slate-400 w-7 md:w-8 shrink-0">
+        <td className="py-1.5 md:py-2.5 px-1 md:px-2 text-center align-middle font-mono text-[10px] md:text-[11px] font-medium text-slate-500 dark:text-slate-400 w-[20px] min-w-[20px] max-w-[20px] md:w-[32px] md:min-w-[32px] md:max-w-[32px] shrink-0 sticky left-0 z-10 bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800/60">
           {rankDisplay != null ? rankDisplay : '—'}
         </td>
 
         {/* Fund Name Column */}
-        <td className="py-1.5 md:py-2.5 px-2 md:px-3 min-w-[200px] md:min-w-[240px] max-w-[340px] align-middle overflow-visible relative">
-          <div className="flex items-center gap-1.5 min-w-0">
+        <td className="py-1.5 md:py-2.5 px-1.5 md:px-3 min-w-[102px] sm:min-w-[130px] md:min-w-[240px] max-w-[110px] sm:max-w-[160px] md:max-w-[340px] align-middle overflow-visible relative sticky left-[20px] md:left-[32px] z-10 bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-900/60 border-r border-slate-200 dark:border-slate-800 border-b border-slate-100 dark:border-slate-800/60 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]">
+          <div className="flex items-center gap-1 min-w-0">
             <StarHoverTooltip
               fund={fund}
               isStarred={isStarred}
               categorySharpeRange={categorySharpeRange}
               categorySortinoRange={categorySortinoRange}
             />
-            <span className="text-[11px] md:text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate" title={fund.name}>
+            <span className="text-[10px] sm:text-[11px] md:text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate" title={fund.name}>
               {cleanFundName(fund.name || fund.schemeName)}
             </span>
           </div>
@@ -817,10 +817,15 @@ export default function MfRankingTable({
       {/* Main Full-Width Table */}
       <div className="w-full overflow-x-auto scrollbar-thin">
         <table className="w-full text-left border-collapse min-w-[1100px]">
-          <thead className="bg-slate-100/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold text-[9px] md:text-[10.5px]">
+          <thead className="bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold text-[9px] md:text-[10.5px]">
             <tr>
-              <th className="py-2 md:py-3 px-1.5 md:px-3 text-center text-slate-500 dark:text-slate-400 font-normal w-7 md:w-8">#</th>
-              {renderSortHeader('FUND / CATEGORY', 'name', 'text-left')}
+              <th className="py-2 md:py-3 px-1 md:px-2 text-center text-slate-500 dark:text-slate-400 font-normal w-[20px] min-w-[20px] max-w-[20px] md:w-[32px] md:min-w-[32px] md:max-w-[32px] sticky left-0 z-20 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">#</th>
+              {renderSortHeader(
+                'FUND / CATEGORY',
+                'name',
+                'text-left',
+                'sticky left-[20px] md:left-[32px] z-20 bg-slate-100 dark:bg-slate-900 border-r border-b border-slate-200 dark:border-slate-800 min-w-[102px] sm:min-w-[130px] md:min-w-[240px] max-w-[110px] sm:max-w-[160px] md:max-w-[340px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]'
+              )}
               {renderSortHeader('AUM (Cr)', 'aum', 'text-right')}
               {renderSortHeader('NAV', 'nav', 'text-right')}
               {renderSortHeader('1W %', 'return_1W', 'text-right')}
@@ -868,18 +873,18 @@ export default function MfRankingTable({
                           onClick={() => handleSubClick(fullSubKey)}
                           onMouseEnter={() => handleSubMouseEnter(fullSubKey)}
                           onMouseLeave={handleSubMouseLeave}
-                          className="bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900/60 border-b border-slate-100 dark:border-slate-900 transition-colors cursor-pointer select-none"
+                          className="bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900 border-b border-slate-100 dark:border-slate-900 transition-colors cursor-pointer select-none group"
                         >
-                          <td colSpan={2} className="py-1.5 md:py-2.5 px-2 md:px-3 pl-2 md:pl-3">
-                            <div className="flex items-center gap-1.5 md:gap-2">
-                              <span className="text-slate-400">
+                          <td colSpan={2} className="py-1.5 md:py-2.5 px-2 md:px-3 pl-2 md:pl-3 sticky left-0 z-10 bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-900 border-r border-slate-200 dark:border-slate-800 border-b border-slate-100 dark:border-slate-900 min-w-[122px] sm:min-w-[150px] md:min-w-[272px] max-w-[130px] sm:max-w-[180px] md:max-w-none shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]">
+                            <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
+                              <span className="text-slate-400 shrink-0">
                                 {isSubCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                               </span>
-                              {getCategoryIcon(subKey, false)}
-                              <span className="text-[11px] md:text-xs font-bold text-slate-800 dark:text-slate-200">
+                              <span className="hidden md:inline-flex shrink-0">{getCategoryIcon(subKey, false)}</span>
+                              <span className="text-[11px] md:text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
                                 {subKey}
                               </span>
-                              <span className="text-[9px] md:text-[10.5px] font-mono font-bold bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/60 px-1.5 md:px-2 py-0.5 rounded-full">
+                              <span className="hidden md:inline-flex text-[9px] md:text-[10.5px] font-mono font-bold bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/60 px-1.5 md:px-2 py-0.5 rounded-full shrink-0">
                                 {subCount} Funds
                               </span>
                             </div>
@@ -907,16 +912,18 @@ export default function MfRankingTable({
                         {/* View All / Show Top 5 Inline Button */}
                         {!isSubCollapsed && subFunds.length > 5 && (
                           <tr className="bg-slate-50/50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800">
-                            <td colSpan={15} className="py-2 px-8 text-left">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleCategoryViewMode(fullSubKey);
-                                }}
-                                className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors inline-flex items-center gap-1"
-                              >
-                                {viewMode === 'top5' ? `View All ${subFunds.length} ${subKey} Funds →` : '←  Show Top 5'}
-                              </button>
+                            <td colSpan={15} className="py-2 px-0 text-left">
+                              <div className="sticky left-0 inline-block px-4 md:px-8">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleCategoryViewMode(fullSubKey);
+                                  }}
+                                  className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors inline-flex items-center gap-1"
+                                >
+                                  {viewMode === 'top5' ? `View All ${subFunds.length} ${subKey} Funds →` : '←   Show Top 5'}
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         )}
@@ -944,20 +951,20 @@ export default function MfRankingTable({
                         onClick={() => handleParentClick(parentKey)}
                         onMouseEnter={() => handleParentMouseEnter(parentKey)}
                         onMouseLeave={handleParentMouseLeave}
-                        className="bg-slate-50 dark:bg-slate-900/90 hover:bg-slate-100 dark:hover:bg-slate-900 border-y border-slate-200 dark:border-slate-800 transition-colors cursor-pointer select-none font-bold"
+                        className="bg-slate-50 dark:bg-slate-900/90 hover:bg-slate-100 dark:hover:bg-slate-800 border-y border-slate-200 dark:border-slate-800 transition-colors cursor-pointer select-none font-bold group"
                       >
-                        <td colSpan={2} className="py-2 md:py-3 px-2 md:px-3">
-                          <div className="flex items-center gap-1.5 md:gap-2">
-                            <span className="text-slate-500 dark:text-slate-400">
+                        <td colSpan={2} className="py-2 md:py-3 px-2 md:px-3 sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 group-hover:bg-slate-100 dark:group-hover:bg-slate-800 border-r border-slate-200 dark:border-slate-800 border-y border-slate-200 dark:border-slate-800 min-w-[122px] sm:min-w-[150px] md:min-w-[272px] max-w-[130px] sm:max-w-[180px] md:max-w-none shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]">
+                          <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
+                            <span className="text-slate-500 dark:text-slate-400 shrink-0">
                               {isParentCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                             </span>
-                            <span className="p-1 bg-blue-50 dark:bg-blue-950/60 rounded-md">
+                            <span className="hidden md:inline-flex p-1 bg-blue-50 dark:bg-blue-950/60 rounded-md shrink-0">
                               {getCategoryIcon(parentKey, true)}
                             </span>
-                            <span className="text-[11px] md:text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                            <span className="text-[11px] md:text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider truncate">
                               {parentKey.replace(/_/g, ' ')}
                             </span>
-                            <span className="text-[9.5px] md:text-[11px] font-mono font-extrabold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/60 px-2 md:px-2.5 py-0.5 rounded-full">
+                            <span className="hidden md:inline-flex text-[9.5px] md:text-[11px] font-mono font-extrabold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/60 px-2 md:px-2.5 py-0.5 rounded-full shrink-0">
                               {parentCount.toLocaleString('en-IN')} Funds
                             </span>
                           </div>
@@ -1003,18 +1010,18 @@ export default function MfRankingTable({
                               onClick={() => handleSubClick(fullSubKey)}
                               onMouseEnter={() => handleSubMouseEnter(fullSubKey)}
                               onMouseLeave={handleSubMouseLeave}
-                              className="bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900/60 border-b border-slate-100 dark:border-slate-900 transition-colors cursor-pointer select-none"
+                              className="bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900 border-b border-slate-100 dark:border-slate-900 transition-colors cursor-pointer select-none group"
                             >
-                              <td colSpan={2} className="py-1.5 md:py-2.5 px-2 md:px-3 pl-4 md:pl-8">
-                                <div className="flex items-center gap-1.5 md:gap-2">
-                                  <span className="text-slate-400">
+                              <td colSpan={2} className="py-1.5 md:py-2.5 px-2 md:px-3 pl-3 md:pl-8 sticky left-0 z-10 bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-900 border-r border-slate-200 dark:border-slate-800 border-b border-slate-100 dark:border-slate-900 min-w-[122px] sm:min-w-[150px] md:min-w-[272px] max-w-[130px] sm:max-w-[180px] md:max-w-none shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]">
+                                <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
+                                  <span className="text-slate-400 shrink-0">
                                     {isSubCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                                   </span>
-                                  {getCategoryIcon(subKey, false)}
-                                  <span className="text-[11px] md:text-xs font-bold text-slate-800 dark:text-slate-200">
+                                  <span className="hidden md:inline-flex shrink-0">{getCategoryIcon(subKey, false)}</span>
+                                  <span className="text-[11px] md:text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
                                     {subKey}
                                   </span>
-                                  <span className="text-[9px] md:text-[10.5px] font-mono font-bold bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/60 px-1.5 md:px-2 py-0.5 rounded-full">
+                                  <span className="hidden md:inline-flex text-[9px] md:text-[10.5px] font-mono font-bold bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/60 px-1.5 md:px-2 py-0.5 rounded-full shrink-0">
                                     {subCount} Funds
                                   </span>
                                 </div>
@@ -1042,16 +1049,18 @@ export default function MfRankingTable({
                             {/* View All / Show Top 5 Inline Button */}
                             {!isSubCollapsed && subFunds.length > 5 && (
                               <tr className="bg-slate-50/50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800">
-                                <td colSpan={15} className="py-2 px-8 text-left">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      toggleCategoryViewMode(fullSubKey);
-                                    }}
-                                    className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors inline-flex items-center gap-1"
-                                  >
-                                    {viewMode === 'top5' ? `View All ${subFunds.length} ${subKey} Funds →` : '←  Show Top 5'}
-                                  </button>
+                                <td colSpan={15} className="py-2 px-0 text-left">
+                                  <div className="sticky left-0 inline-block px-4 md:px-8">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleCategoryViewMode(fullSubKey);
+                                      }}
+                                      className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors inline-flex items-center gap-1"
+                                    >
+                                      {viewMode === 'top5' ? `View All ${subFunds.length} ${subKey} Funds →` : '←   Show Top 5'}
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             )}
@@ -1068,7 +1077,9 @@ export default function MfRankingTable({
             ) : (
               <tr>
                 <td colSpan={15} className="py-12 text-center text-slate-500 text-xs">
-                  No mutual fund schemes match the selected category filters.
+                  <div className="sticky left-0 w-full text-center">
+                    No mutual fund schemes match the selected category filters.
+                  </div>
                 </td>
               </tr>
             )}

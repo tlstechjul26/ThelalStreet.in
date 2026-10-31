@@ -8,7 +8,7 @@ import BrandLogo from './BrandLogo';
 export default function MobileStockWeightageView({
   fund = null,
   funds = [],
-  selectedCategory = 'Large Cap',
+  selectedCategory = 'Large & Mid Cap',
   categories = [],
   onSelectCategory = () => {},
   onSelectFund = () => {},

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Wallet, Clock, Users, TrendingUp, Trophy, PieChart } from 'lucide-react';
+import { Wallet, Clock, Users, TrendingUp, Trophy, PieChart, ArrowUpRight } from 'lucide-react';
 
 const ASSET_COLORS = {
   Equity: '#3b82f6',
@@ -139,11 +139,11 @@ export default function MfMarketOverview({ enrichedFunds = [], liveSummary = nul
   const amcMarketShareDate = liveSummary?.amcMarketShare?.asOf || asOfDate || 'Q2 FY2027';
 
   return (
-    <div className="w-full my-1.5 sm:my-3 md:my-4">
+    <div className="w-full my-1 sm:my-2 md:my-2.5">
       {/* Single Card Mobile Overview (Only visible on screens < lg) */}
       <div className="block lg:hidden w-full">
         {/* MOBILE CARD 1: INDUSTRY AUM, TOTAL FUNDS & ASSET ALLOCATION */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 sm:p-3 shadow-xs space-y-2.5 w-full">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 sm:p-2.5 shadow-xs space-y-2 w-full">
           {/* Section 1: Total Industry MF AUM */}
           <div className="flex flex-col">
             <div className="flex items-center justify-between">
@@ -192,16 +192,23 @@ export default function MfMarketOverview({ enrichedFunds = [], liveSummary = nul
             </div>
 
             {/* Registered AMCs */}
-            <div className="p-2 rounded-lg bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60">
-              <div className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                <Users className="w-3 h-3 text-purple-500 shrink-0" />
-                <span>REGISTERED AMCS</span>
+            <div 
+              onClick={() => window.open('/mutual-funds/registered-amcs', '_blank')}
+              className="p-2 rounded-lg bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 cursor-pointer hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-2xs transition-all group"
+              title="Click to view Registered AMCs & Facts & Figures in a new tab"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                  <Users className="w-3 h-3 text-purple-500 shrink-0" />
+                  <span>REGISTERED AMCS</span>
+                </div>
+                <ArrowUpRight className="w-3 h-3 text-purple-500 opacity-70 group-hover:opacity-100 transition-opacity" />
               </div>
-              <div className="text-base font-extrabold font-mono text-slate-900 dark:text-white mt-0.5">
+              <div className="text-base font-extrabold font-mono text-slate-900 dark:text-white mt-0.5 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
                 {registeredAmcsDisplay}
               </div>
-              <div className="text-[9px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                AMCs (SEBI / AMFI)
+              <div className="text-[8.5px] text-purple-600 dark:text-purple-400 font-semibold truncate mt-0.5">
+                View AMCs &amp; Facts ↗
               </div>
             </div>
           </div>
@@ -270,7 +277,7 @@ export default function MfMarketOverview({ enrichedFunds = [], liveSummary = nul
       <div className="hidden lg:grid lg:grid-cols-6 gap-2 sm:gap-3 lg:gap-3.5">
         
         {/* CARD 1: TOTAL INDUSTRY MF AUM */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 sm:p-3 md:p-4 flex flex-col justify-between shadow-xs transition-all">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 sm:p-2.5 md:p-3 flex flex-col justify-between shadow-xs transition-all">
           <div className="flex items-start justify-between">
             <span className="text-[9px] sm:text-[10px] md:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               TOTAL INDUSTRY MF AUM
@@ -279,13 +286,13 @@ export default function MfMarketOverview({ enrichedFunds = [], liveSummary = nul
               <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-2 sm:mt-3">
+          <div className="mt-1.5 sm:mt-2">
             <div className="text-base sm:text-lg md:text-xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
               {industryAumDisplay}
             </div>
             <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">Industry AUM (All Plans)</div>
           </div>
-          <div className="mt-2 sm:mt-3 pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
+          <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
             {liveSummary?.industryAum?.change ? (
               <span className={String(liveSummary.industryAum.change).startsWith('-') ? "text-rose-600 dark:text-rose-400 font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold"}>
                 {String(liveSummary.industryAum.change).startsWith('-') ? '▼ ' : '▲ '}{String(liveSummary.industryAum.change).replace(/^[+-]\s*/, '')}
@@ -300,16 +307,16 @@ export default function MfMarketOverview({ enrichedFunds = [], liveSummary = nul
         {/* CARD 2: TOTAL FUNDS + AUM DONUT CHART */}
         <div 
           onClick={onSelectAllFunds}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 sm:p-3 md:p-4 flex flex-col justify-between shadow-xs transition-all cursor-pointer group hover:border-blue-400 dark:hover:border-blue-500"
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 sm:p-2.5 md:p-3 flex flex-col justify-between shadow-xs transition-all cursor-pointer group hover:border-blue-400 dark:hover:border-blue-500"
           title="Click to view all funds in screener"
         >
           {/* Top Half: Funds Stat */}
-          <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-2 sm:pb-3">
+          <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5 sm:pb-2">
             <div>
               <div className="text-[9px] sm:text-[10px] md:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 TOTAL FUNDS
               </div>
-              <div className="flex items-baseline gap-1.5 sm:gap-2 mt-1">
+              <div className="flex items-baseline gap-1.5 sm:gap-2 mt-0.5">
                 <span className="text-base sm:text-lg md:text-xl font-extrabold font-mono text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                   {liveSummary && liveSummary.totalFunds && typeof liveSummary.totalFunds.value === 'number'
                     ? liveSummary.totalFunds.value.toLocaleString('en-IN')
@@ -323,8 +330,8 @@ export default function MfMarketOverview({ enrichedFunds = [], liveSummary = nul
           </div>
 
           {/* Bottom Half: AUM Breakdown Donut */}
-          <div className="mt-2 sm:mt-3 flex-1 flex flex-col justify-end">
-            <div className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 sm:mb-2">
+          <div className="mt-1.5 sm:mt-2 flex-1 flex flex-col justify-end">
+            <div className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 sm:mb-1.5">
               AUM BREAKDOWN
             </div>
             
@@ -356,7 +363,7 @@ export default function MfMarketOverview({ enrichedFunds = [], liveSummary = nul
                 </div>
 
                 {/* Donut Legend */}
-                <div className="flex-1 flex flex-col gap-1 overflow-hidden">
+                <div className="flex-1 flex flex-col gap-0.5 sm:gap-1 overflow-hidden">
                   {displayedAssetAllocation.slice(0, 3).map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between text-[9px] sm:text-[10px]">
                       <div className="flex items-center gap-1.5 truncate">
@@ -380,29 +387,36 @@ export default function MfMarketOverview({ enrichedFunds = [], liveSummary = nul
         </div>
 
         {/* CARD 3: REGISTERED AMCS */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 sm:p-3 md:p-4 flex flex-col justify-between shadow-xs transition-all">
+        <div 
+          onClick={() => window.open('/mutual-funds/registered-amcs', '_blank')}
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 sm:p-2.5 md:p-3 flex flex-col justify-between shadow-xs transition-all cursor-pointer hover:border-purple-400 dark:hover:border-purple-600 hover:shadow-2xs group"
+          title="Click to view Registered AMCs & Facts & Figures in a new tab"
+        >
           <div className="flex items-start justify-between">
-            <span className="text-[9px] sm:text-[10px] md:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="text-[9px] sm:text-[10px] md:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
               REGISTERED AMCS
             </span>
-            <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+            <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
               <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-2 sm:mt-3">
-            <div className="text-base sm:text-lg md:text-xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
-              {liveSummary?.registeredAmcs?.value || (registeredAmcCount > 0 ? registeredAmcCount : 45)}
+          <div className="mt-1.5 sm:mt-2">
+            <div className="text-base sm:text-lg md:text-xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight flex items-center gap-1 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+              <span>{liveSummary?.registeredAmcs?.value || (registeredAmcCount > 0 ? registeredAmcCount : 45)}</span>
+              <ArrowUpRight size={14} className="text-purple-500 opacity-60 group-hover:opacity-100 transition-opacity" />
             </div>
-            <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">AMCs</div>
+            <div className="text-[9.5px] sm:text-[10.5px] text-purple-600 dark:text-purple-400 font-semibold mt-0.5">
+              View AMCs &amp; Facts ↗
+            </div>
           </div>
-          <div className="mt-2 sm:mt-3 pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
+          <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
             <span>Source: SEBI / AMFI</span>
             <span>As of {liveSummary?.registeredAmcs?.asOf || asOfDate || 'September 2026'}</span>
           </div>
         </div>
 
         {/* CARD 4: MONTHLY SIP INFLOW */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 sm:p-3 md:p-4 flex flex-col justify-between shadow-xs transition-all">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 sm:p-2.5 md:p-3 flex flex-col justify-between shadow-xs transition-all">
           <div className="flex items-start justify-between">
             <span className="text-[9px] sm:text-[10px] md:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               MONTHLY SIP INFLOW
@@ -411,13 +425,13 @@ export default function MfMarketOverview({ enrichedFunds = [], liveSummary = nul
               <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-2 sm:mt-3">
+          <div className="mt-1.5 sm:mt-2">
             <div className="text-base sm:text-lg md:text-xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
               {monthlySipVal}
             </div>
             <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">{monthlySipSecondary}</div>
           </div>
-          <div className="mt-2 sm:mt-3 pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
+          <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
             {monthlySipChange ? (
               <span className="text-emerald-600 dark:text-emerald-400 font-bold">▲ {monthlySipChange}</span>
             ) : (
@@ -428,7 +442,7 @@ export default function MfMarketOverview({ enrichedFunds = [], liveSummary = nul
         </div>
 
         {/* CARD 5: TOP SIP FUNDS */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 sm:p-3 md:p-4 flex flex-col justify-between shadow-xs transition-all">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 sm:p-2.5 md:p-3 flex flex-col justify-between shadow-xs transition-all">
           <div className="flex items-start justify-between">
             <span className="text-[9px] sm:text-[10px] md:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               TOP SIP FUNDS
@@ -437,13 +451,13 @@ export default function MfMarketOverview({ enrichedFunds = [], liveSummary = nul
               <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-2 sm:mt-3">
+          <div className="mt-1.5 sm:mt-2">
             <div className="text-[10.5px] sm:text-xs text-slate-900 dark:text-slate-100 font-bold leading-snug">
               {liveSummary?.topSipFunds?.value || 'Small-cap (₹9,039 Cr), Mid-cap (₹7,835 Cr), Flexi-cap (₹6,702 Cr)'}
             </div>
             <div className="text-[9.5px] sm:text-[10.5px] text-slate-500 dark:text-slate-400 mt-1">Top Categories by Net Inflow ({liveSummary?.topSipFunds?.asOf || 'September 2026'})</div>
           </div>
-          <div className="mt-2 sm:mt-3 pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
+          <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
             <span>Source: AMFI Category Inflow Data</span>
             <span>As of {liveSummary?.topSipFunds?.asOf || asOfDate || 'September 2026'}</span>
           </div>

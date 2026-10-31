@@ -23,10 +23,10 @@ export default function MarketFilterStrip({
             <button
               key={filter.id}
               onClick={() => onSelectFilter(filter.id)}
-              className={`px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-2.5 sm:px-3 py-1 sm:py-1.5 text-[10.5px] sm:text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap border ${
                 isActive
-                  ? 'bg-blue-600 text-white shadow-xs font-bold'
-                  : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-500/30 font-black'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 hover:border-slate-400'
               }`}
             >
               {filter.label}

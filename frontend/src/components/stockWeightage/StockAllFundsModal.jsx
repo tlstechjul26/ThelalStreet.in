@@ -43,8 +43,28 @@ export default function StockAllFundsModal({
 
   // Filter
   const filteredFunds = rawFunds.filter(f => {
-    if (categoryFilter !== 'all' && f.category && !f.category.toLowerCase().includes(categoryFilter.toLowerCase())) {
-      return false;
+    if (categoryFilter !== 'all') {
+      const cat = (f.targetCategory || f.category || '').toLowerCase();
+      const name = (f.schemeName || '').toLowerCase();
+      if (categoryFilter === 'Large & Mid Cap') {
+        const matches = cat.includes('large & mid') || cat.includes('large and mid') ||
+                        cat.includes('large cap') || cat.includes('mid cap') ||
+                        cat.includes('flexi cap') || cat.includes('multi cap') ||
+                        name.includes('large & mid') || name.includes('large and mid') ||
+                        name.includes('large cap') || name.includes('mid cap') || name.includes('bluechip');
+        if (!matches) return false;
+      } else if (categoryFilter === 'Small Cap') {
+        const matches = cat.includes('small cap') || cat.includes('smallcap') ||
+                        cat.includes('flexi cap') || cat.includes('multi cap') ||
+                        name.includes('small cap') || name.includes('smallcap');
+        if (!matches) return false;
+      } else if (categoryFilter === 'Contra') {
+        if (!cat.includes('contra') && !name.includes('contra')) return false;
+      } else if (categoryFilter === 'Value') {
+        if (!cat.includes('value') && !name.includes('value')) return false;
+      } else if (!cat.includes(categoryFilter.toLowerCase())) {
+        return false;
+      }
     }
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -162,8 +182,7 @@ export default function StockAllFundsModal({
               className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-semibold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
             >
               <option value="all">All Categories</option>
-              <option value="Large Cap">Large Cap</option>
-              <option value="Mid Cap">Mid Cap</option>
+              <option value="Large & Mid Cap">Large & Mid Cap</option>
               <option value="Small Cap">Small Cap</option>
               <option value="Contra">Contra</option>
               <option value="Value">Value</option>

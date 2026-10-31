@@ -13,6 +13,20 @@ const UserSchema = new mongoose.Schema({
   lockUntil: { type: Date, default: null },
   lastLoginAt: { type: Date, default: null },
 
+  // Email Verification & Anti-Fake Signup
+  isEmailVerified: { type: Boolean, default: false, index: true },
+  emailOtpHash: { type: String, default: null },
+  emailOtpExpiresAt: { type: Date, default: null },
+  emailOtpLastSentAt: { type: Date, default: null },
+  emailOtpAttempts: { type: Number, default: 0 },
+  emailOtpResendCount: { type: Number, default: 0 },
+  status: { 
+    type: String, 
+    enum: ['pending_verification', 'active', 'suspended'], 
+    default: 'pending_verification' 
+  },
+  signupIp: { type: String, default: null },
+
   // Two-Factor Authentication (RFC 6238 TOTP)
   isTwoFactorEnabled: { type: Boolean, default: false },
   totpSecretEncrypted: { type: String, default: null },

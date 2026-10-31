@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
@@ -53,6 +54,16 @@ dotenv.config();
 
 const app = express();
 app.disable('x-powered-by');
+
+// Production performance: Enable gzip and brotli compression for responses >= 1KB
+app.use(compression({
+  threshold: 1024,
+  level: 6,
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  }
+}));
 
 // Trusted reverse-proxy configuration for production environments (enables proper client IP resolution and HTTPS detection)
 function getTrustProxyConfig() {

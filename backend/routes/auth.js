@@ -18,6 +18,9 @@ import authenticateToken, { getJwtSecret, revokeToken } from '../middleware/auth
 import redisCache from '../services/RedisCacheService.js';
 import totpService from '../services/TotpService.js';
 import logger from '../utils/logger.js';
+import { validateEmail } from '../utils/emailValidator.js';
+import emailService from '../services/EmailService.js';
+import turnstileService from '../services/TurnstileService.js';
 
 dotenv.config();
 
@@ -44,6 +47,17 @@ const signupLimiter = rateLimit({
   legacyHeaders: false,
   validate: { singleCount: false },
   store: redisCache.createRateLimitStore(60 * 60 * 1000),
+  skip: (req) => isTest || req.headers?.['x-test-suite'] === 'true'
+});
+
+const otpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 15 : 1000,
+  message: { error: 'Too many verification attempts. Please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { singleCount: false },
+  store: redisCache.createRateLimitStore(15 * 60 * 1000),
   skip: (req) => isTest || req.headers?.['x-test-suite'] === 'true'
 });
 
@@ -77,9 +91,16 @@ function isDbConnected() {
 // Resilient fallback user registry for session continuity when MongoDB is unavailable
 export const fallbackUsers = new Map();
 
+function hashOtp(otp) {
+  return crypto.createHmac('sha256', getJwtSecret()).update(String(otp).trim()).digest('hex');
+}
+
 async function saveUser(userData) {
   const cleanEmail = (userData.email || '').toLowerCase().trim();
   const id = userData._id ? userData._id.toString() : (mongoose.Types.ObjectId.isValid(userData.id) ? userData.id.toString() : new mongoose.Types.ObjectId().toString());
+  const isEmailVerified = userData.isEmailVerified !== undefined ? !!userData.isEmailVerified : (!!userData.googleId);
+  const status = userData.status || (isEmailVerified ? 'active' : 'pending_verification');
+
   const userObj = {
     _id: id,
     id: id,
@@ -88,6 +109,13 @@ async function saveUser(userData) {
     googleId: userData.googleId || null,
     passwordHash: userData.passwordHash || null,
     role: userData.role || 'user',
+    isEmailVerified,
+    status,
+    emailOtpHash: userData.emailOtpHash || null,
+    emailOtpExpiresAt: userData.emailOtpExpiresAt || null,
+    emailOtpLastSentAt: userData.emailOtpLastSentAt || null,
+    emailOtpAttempts: userData.emailOtpAttempts || 0,
+    emailOtpResendCount: userData.emailOtpResendCount || 0,
     isTwoFactorEnabled: !!userData.isTwoFactorEnabled,
     createdAt: userData.createdAt || new Date()
   };
@@ -105,6 +133,13 @@ async function saveUser(userData) {
         if (userData.googleId) existing.googleId = userData.googleId;
         if (userData.name) existing.name = userData.name;
         if (userData.passwordHash) existing.passwordHash = userData.passwordHash;
+        if (userData.isEmailVerified !== undefined) existing.isEmailVerified = userData.isEmailVerified;
+        if (userData.status) existing.status = userData.status;
+        if (userData.emailOtpHash !== undefined) existing.emailOtpHash = userData.emailOtpHash;
+        if (userData.emailOtpExpiresAt !== undefined) existing.emailOtpExpiresAt = userData.emailOtpExpiresAt;
+        if (userData.emailOtpLastSentAt !== undefined) existing.emailOtpLastSentAt = userData.emailOtpLastSentAt;
+        if (userData.emailOtpAttempts !== undefined) existing.emailOtpAttempts = userData.emailOtpAttempts;
+        if (userData.emailOtpResendCount !== undefined) existing.emailOtpResendCount = userData.emailOtpResendCount;
         await existing.save();
         fallbackUsers.set(cleanEmail, existing);
         fallbackUsers.set(existing._id.toString(), existing);
@@ -138,8 +173,16 @@ function getGoogleConfig() {
 function signToken(user) {
   const jwtSecret = getJwtSecret();
   const userId = user._id ? user._id.toString() : (user.id ? user.id.toString() : 'user_default');
+  const isEmailVerified = user.isEmailVerified !== false;
   return jwt.sign(
-    { id: userId, email: user.email, name: user.name, role: user.role || 'user' },
+    {
+      id: userId,
+      email: user.email,
+      name: user.name,
+      role: user.role || 'user',
+      isEmailVerified,
+      status: user.status || (isEmailVerified ? 'active' : 'pending_verification')
+    },
     jwtSecret,
     { expiresIn: '7d', algorithm: 'HS256' }
   );
@@ -156,6 +199,7 @@ function signTempToken(user) {
 }
 
 function buildAuthResponse(user, token) {
+  const isEmailVerified = user.isEmailVerified !== false;
   return {
     token,
     user: {
@@ -163,6 +207,8 @@ function buildAuthResponse(user, token) {
       email: user.email,
       name: user.name,
       role: user.role || 'user',
+      isEmailVerified,
+      status: user.status || (isEmailVerified ? 'active' : 'pending_verification'),
       isTwoFactorEnabled: !!user.isTwoFactorEnabled,
       createdAt: user.createdAt
     }
@@ -196,6 +242,8 @@ router.get('/me', authenticateToken, async (req, res) => {
         email: user?.email || req.user.email,
         name: user?.name || req.user.name || '',
         role: user?.role || req.user.role || 'user',
+        isEmailVerified: user ? user.isEmailVerified !== false : req.user.isEmailVerified !== false,
+        status: user?.status || req.user.status || 'active',
         isTwoFactorEnabled: !!user?.isTwoFactorEnabled,
         createdAt: user?.createdAt || null
       }
@@ -214,7 +262,9 @@ router.get('/session', authenticateToken, async (req, res) => {
       id: req.user.id,
       email: req.user.email,
       name: req.user.name || '',
-      role: req.user.role || 'user'
+      role: req.user.role || 'user',
+      isEmailVerified: req.user.isEmailVerified !== false,
+      status: req.user.status || 'active'
     }
   });
 });
@@ -236,16 +286,27 @@ router.post('/logout', authenticateToken, async (req, res) => {
 // POST /auth/signup
 router.post('/signup', signupLimiter, async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, turnstileToken } = req.body;
+
+    // Verify Cloudflare Turnstile token if enabled/configured
+    const turnstileResult = await turnstileService.verifyToken(turnstileToken, req.ip);
+    if (!turnstileResult.success) {
+      return res.status(400).json({ error: turnstileResult.error || 'CAPTCHA validation failed. Please try again.' });
+    }
 
     if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
 
-    const cleanEmail = email.toLowerCase().trim();
-    if (!EMAIL_REGEX.test(cleanEmail) || cleanEmail.length > 254) {
-      return res.status(400).json({ error: 'Please enter a valid email address.' });
+    // Strict email validation (RFC 5322 syntax, length, disposable domain blocking, MX check)
+    const emailValidation = await validateEmail(email, {
+      checkMx: process.env.NODE_ENV === 'production' && !isTest,
+      allowTestDomains: isTest || req.headers?.['x-test-suite'] === 'true'
+    });
+    if (!emailValidation.valid) {
+      return res.status(400).json({ error: emailValidation.error || emailValidation.reason || 'Invalid email address.' });
     }
+    const cleanEmail = emailValidation.email || email.toLowerCase().trim();
 
     if (password.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
@@ -260,18 +321,145 @@ router.post('/signup', signupLimiter, async (req, res) => {
 
     const existing = await User.findOne({ email: cleanEmail });
     if (existing) {
-      return res.status(409).json({ error: 'An account with this email already exists.' });
+      if (existing.isEmailVerified) {
+        return res.status(409).json({ error: 'An account with this email already exists.' });
+      } else {
+        // Existing unverified account: regenerate OTP and notify user to verify
+        const otp = crypto.randomInt(100000, 1000000).toString();
+        existing.emailOtpHash = hashOtp(otp);
+        existing.emailOtpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
+        existing.emailOtpLastSentAt = new Date();
+        existing.emailOtpAttempts = 0;
+        const salt = await bcrypt.genSalt(12);
+        existing.passwordHash = await bcrypt.hash(password, salt);
+        if (name) existing.name = typeof name === 'string' ? name.trim().slice(0, 100) : '';
+        await existing.save();
+
+        const emailResult = await emailService.sendVerificationOtp(cleanEmail, otp, existing.name);
+        return res.status(201).json({
+          requiresVerification: true,
+          email: cleanEmail,
+          message: 'An unverified account with this email exists. A new 6-digit verification code has been sent to your email.',
+          ...(emailResult?.devOtp ? { devOtp: emailResult.devOtp } : {})
+        });
+      }
     }
 
     const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(password, salt);
     const cleanName = typeof name === 'string' ? name.trim().slice(0, 100) : '';
 
+    // Generate 6-digit OTP
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    const emailOtpHash = hashOtp(otp);
+    const emailOtpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
+    const emailOtpLastSentAt = new Date();
+
     const user = await User.create({
       email: cleanEmail,
       passwordHash,
-      name: cleanName
+      name: cleanName,
+      isEmailVerified: false,
+      status: 'pending_verification',
+      emailOtpHash,
+      emailOtpExpiresAt,
+      emailOtpLastSentAt,
+      emailOtpAttempts: 0,
+      emailOtpResendCount: 0,
+      signupIp: req.ip || ''
     });
+
+    // Send verification email
+    const emailResult = await emailService.sendVerificationOtp(cleanEmail, otp, cleanName);
+
+    // Note: Never issue session token or set auth cookie until email verification succeeds
+    return res.status(201).json({
+      requiresVerification: true,
+      email: cleanEmail,
+      message: 'Registration successful! Please verify your email address. A 6-digit verification code has been sent.',
+      ...(emailResult?.devOtp ? { devOtp: emailResult.devOtp } : {})
+    });
+  } catch (err) {
+    logger.error('Signup error', { error: err.message });
+    return res.status(500).json({ error: 'Signup failed. Please try again later.' });
+  }
+});
+
+// POST /auth/verify-email — verify 6-digit OTP and activate account
+router.post('/verify-email', otpLimiter, async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code || typeof email !== 'string' || typeof code !== 'string') {
+      return res.status(400).json({ error: 'Email and 6-digit verification code are required.' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanCode = code.trim();
+
+    if (!/^\d{6}$/.test(cleanCode)) {
+      return res.status(400).json({ error: 'Verification code must be exactly 6 digits.' });
+    }
+
+    if (!isDbConnected()) {
+      return res.status(503).json({ error: 'Database service unavailable. Please try again later.' });
+    }
+
+    const user = await User.findOne({ email: cleanEmail });
+    if (!user) {
+      return res.status(400).json({ error: 'Account not found. Please sign up first.' });
+    }
+
+    if (user.isEmailVerified) {
+      const token = signToken(user);
+      res.cookie('marketpulse_token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: '/'
+      });
+      return res.json(buildAuthResponse(user, token));
+    }
+
+    // Check maximum attempts limit (max 5)
+    if ((user.emailOtpAttempts || 0) >= 5) {
+      return res.status(400).json({ error: 'Maximum verification attempts exceeded. Please request a new code.' });
+    }
+
+    // Check expiration (5 minutes)
+    if (!user.emailOtpExpiresAt || user.emailOtpExpiresAt.getTime() < Date.now()) {
+      return res.status(410).json({ error: 'Verification code has expired. Please request a new code.' });
+    }
+
+    // Timing-safe comparison of HMAC SHA-256 hash
+    const expectedHash = user.emailOtpHash || '';
+    const givenHash = hashOtp(cleanCode);
+
+    let isMatch = false;
+    if (expectedHash.length === givenHash.length) {
+      isMatch = crypto.timingSafeEqual(Buffer.from(expectedHash, 'utf8'), Buffer.from(givenHash, 'utf8'));
+    }
+
+    if (!isMatch) {
+      user.emailOtpAttempts = (user.emailOtpAttempts || 0) + 1;
+      await user.save();
+      const remaining = 5 - user.emailOtpAttempts;
+      return res.status(400).json({
+        error: `Invalid verification code.${remaining > 0 ? ` ${remaining} attempt(s) remaining.` : ' Maximum attempts exceeded. Please request a new code.'}`
+      });
+    }
+
+    // Code is valid: Mark verified and active
+    user.isEmailVerified = true;
+    user.status = 'active';
+    user.emailOtpHash = null;
+    user.emailOtpExpiresAt = null;
+    user.emailOtpAttempts = 0;
+    user.emailOtpResendCount = 0;
+    await user.save();
+
+    logger.info('Email successfully verified for user', { email: cleanEmail });
 
     const token = signToken(user);
     res.cookie('marketpulse_token', token, {
@@ -282,14 +470,82 @@ router.post('/signup', signupLimiter, async (req, res) => {
       path: '/'
     });
 
-    return res.status(201).json(buildAuthResponse(user, token));
+    return res.json(buildAuthResponse(user, token));
   } catch (err) {
-    logger.error('Signup error', { error: err.message });
-    return res.status(500).json({ error: 'Signup failed. Please try again later.' });
+    logger.error('Verify email error', { error: err.message });
+    return res.status(500).json({ error: 'Failed to verify email. Please try again later.' });
   }
 });
 
-// POST /auth/login — with account-level lockout & 2FA support
+// POST /auth/resend-otp — resend verification OTP with 60s cooldown and hourly limit
+router.post('/resend-otp', otpLimiter, async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ error: 'Email is required.' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+
+    if (!isDbConnected()) {
+      return res.status(503).json({ error: 'Database service unavailable. Please try again later.' });
+    }
+
+    const user = await User.findOne({ email: cleanEmail });
+    if (!user) {
+      return res.status(400).json({ error: 'Account not found. Please sign up first.' });
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({ error: 'This email is already verified. Please log in.' });
+    }
+
+    // 60-second cooldown check
+    const now = Date.now();
+    if (user.emailOtpLastSentAt) {
+      const timeSinceLastSent = now - user.emailOtpLastSentAt.getTime();
+      if (timeSinceLastSent < 60 * 1000) {
+        const waitSeconds = Math.ceil((60 * 1000 - timeSinceLastSent) / 1000);
+        return res.status(429).json({
+          error: `Please wait ${waitSeconds} second(s) before requesting another verification code.`,
+          cooldownSeconds: waitSeconds
+        });
+      }
+    }
+
+    // Rate limit: max 5 resends per hour
+    if ((user.emailOtpResendCount || 0) >= 5) {
+      if (user.emailOtpLastSentAt && (now - user.emailOtpLastSentAt.getTime() > 60 * 60 * 1000)) {
+        user.emailOtpResendCount = 0;
+      } else {
+        return res.status(429).json({ error: 'Too many verification code requests. Please try again after an hour.' });
+      }
+    }
+
+    // Generate fresh 6-digit OTP
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    user.emailOtpHash = hashOtp(otp);
+    user.emailOtpExpiresAt = new Date(now + 5 * 60 * 1000); // 5 minutes
+    user.emailOtpLastSentAt = new Date(now);
+    user.emailOtpAttempts = 0;
+    user.emailOtpResendCount = (user.emailOtpResendCount || 0) + 1;
+    await user.save();
+
+    const emailResult = await emailService.sendVerificationOtp(cleanEmail, otp, user.name);
+
+    return res.json({
+      success: true,
+      message: 'A new 6-digit verification code has been sent to your email.',
+      ...(emailResult?.devOtp ? { devOtp: emailResult.devOtp } : {})
+    });
+  } catch (err) {
+    logger.error('Resend OTP error', { error: err.message });
+    return res.status(500).json({ error: 'Failed to resend verification code. Please try again later.' });
+  }
+});
+
+// POST /auth/login — with account-level lockout, email verification enforcement & 2FA support
 router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -313,6 +569,11 @@ router.post('/login', loginLimiter, async (req, res) => {
     const user = await User.findOne({ email: cleanEmail });
     if (!user || !user.passwordHash || user.isRevoked) {
       return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    // Account status check (e.g. suspended)
+    if (user.status === 'suspended') {
+      return res.status(403).json({ error: 'Account has been suspended. Please contact support.' });
     }
 
     // Account-level Brute-Force Lockout check
@@ -341,6 +602,31 @@ router.post('/login', loginLimiter, async (req, res) => {
     }
     user.lastLoginAt = new Date();
     await user.save();
+
+    // Check Email Verification status
+    if (user.isEmailVerified === false) {
+      // Check if fresh OTP should be sent if expired or never sent
+      const isExpired = !user.emailOtpExpiresAt || user.emailOtpExpiresAt.getTime() < Date.now();
+      const canSend = !user.emailOtpLastSentAt || (Date.now() - user.emailOtpLastSentAt.getTime() >= 60000);
+      let devOtp = null;
+      if (isExpired && canSend) {
+        const otp = crypto.randomInt(100000, 1000000).toString();
+        user.emailOtpHash = hashOtp(otp);
+        user.emailOtpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
+        user.emailOtpLastSentAt = new Date();
+        user.emailOtpAttempts = 0;
+        await user.save();
+        const emailResult = await emailService.sendVerificationOtp(cleanEmail, otp, user.name);
+        if (emailResult?.devOtp) devOtp = emailResult.devOtp;
+      }
+
+      return res.status(403).json({
+        error: 'Email verification required. Please verify your email before logging in.',
+        requiresVerification: true,
+        email: user.email,
+        ...(devOtp ? { devOtp } : {})
+      });
+    }
 
     // 2FA Flow Evaluation: Mandatory for Admins, optional for Standard Users
     if (user.role === 'admin') {
@@ -710,7 +996,9 @@ router.get('/google/callback', async (req, res) => {
     const user = await saveUser({
       email: googleUser.email.toLowerCase().trim(),
       googleId: googleUser.sub,
-      name: googleUser.name || (googleUser.email ? googleUser.email.split('@')[0] : 'User')
+      name: googleUser.name || (googleUser.email ? googleUser.email.split('@')[0] : 'User'),
+      isEmailVerified: true,
+      status: 'active'
     });
 
     const token = signToken(user);
@@ -786,7 +1074,9 @@ router.post('/google', async (req, res) => {
     const user = await saveUser({
       email: googleUser.email.toLowerCase().trim(),
       googleId: googleUser.sub,
-      name: googleUser.name || ''
+      name: googleUser.name || '',
+      isEmailVerified: true,
+      status: 'active'
     });
 
     const token = signToken(user);

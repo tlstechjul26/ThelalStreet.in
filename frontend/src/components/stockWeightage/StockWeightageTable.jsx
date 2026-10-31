@@ -1,6 +1,5 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
-import BrandLogo from './BrandLogo';
 import TrendSparkline from './TrendSparkline';
 
 export default function StockWeightageTable({
@@ -63,13 +62,13 @@ export default function StockWeightageTable({
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs whitespace-nowrap">
           <thead>
-            <tr className="border-b text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50/80 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 select-none">
-              <th className="py-3 px-3 w-10 text-center text-slate-400">#</th>
+            <tr className="border-b text-[10.5px] md:text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50/80 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 select-none">
+              <th className="py-2 px-1 md:px-1.5 w-6 min-w-6 max-w-6 md:w-8 md:min-w-8 md:max-w-8 text-center text-slate-400 sticky left-0 z-20 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">#</th>
               
               {/* Stock Column */}
               <th 
                 onClick={() => onSort('name')}
-                className="py-3 px-3 cursor-pointer group min-w-[175px]"
+                className="py-2 px-1.5 md:px-2.5 cursor-pointer group min-w-[80px] max-w-[95px] md:min-w-[125px] md:max-w-none sticky left-6 md:left-8 z-20 bg-slate-50 dark:bg-slate-900 border-r border-b border-slate-200 dark:border-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]"
               >
                 <div className="flex items-center gap-1 hover:text-slate-900 dark:hover:text-white transition-colors">
                   <span>Stock</span>
@@ -80,7 +79,7 @@ export default function StockWeightageTable({
               {/* Sector Column */}
               <th 
                 onClick={() => onSort('sector')}
-                className="py-3 px-3 min-w-[120px] cursor-pointer group font-semibold"
+                className="py-2 md:py-2.5 px-1.5 md:px-2 min-w-[70px] md:min-w-[90px] cursor-pointer group font-semibold"
               >
                 <div className="flex items-center gap-1 hover:text-slate-900 dark:hover:text-white transition-colors">
                   <span>Sector</span>
@@ -91,10 +90,11 @@ export default function StockWeightageTable({
               {/* Number of Funds Holdings Column */}
               <th 
                 onClick={() => onSort('fundCount')}
-                className="py-3 px-3 text-center cursor-pointer group min-w-[145px]"
+                className="py-2 md:py-2.5 px-1 md:px-2 text-center cursor-pointer group min-w-[75px] md:min-w-[95px]"
+                title="Number of Funds Holdings"
               >
-                <div className="flex items-center justify-center gap-1 text-[#0D6B58] dark:text-emerald-400 font-extrabold hover:opacity-80 transition-opacity">
-                  <span>Number of Funds Holdings</span>
+                <div className="flex items-center justify-center gap-0.5 text-[#0D6B58] dark:text-emerald-400 font-extrabold hover:opacity-80 transition-opacity">
+                  <span className="truncate">Funds Holding</span>
                   {renderSortIcon('fundCount')}
                 </div>
               </th>
@@ -102,10 +102,11 @@ export default function StockWeightageTable({
               {/* MF Universe Weightage Column */}
               <th 
                 onClick={() => onSort('universeWeightPct')}
-                className="py-3 px-3 text-right cursor-pointer group min-w-[145px]"
+                className="py-2 md:py-2.5 px-1 md:px-2 text-right cursor-pointer group min-w-[70px] md:min-w-[85px]"
+                title="MF Universe Weightage"
               >
-                <div className="flex items-center justify-end gap-1 hover:text-slate-900 dark:hover:text-white transition-colors">
-                  <span>MF Universe Weightage</span>
+                <div className="flex items-center justify-end gap-0.5 hover:text-slate-900 dark:hover:text-white transition-colors">
+                  <span className="truncate">Universe Wt %</span>
                   {renderSortIcon('universeWeightPct')}
                 </div>
               </th>
@@ -113,10 +114,11 @@ export default function StockWeightageTable({
               {/* Total AUM Exposure Column */}
               <th 
                 onClick={() => onSort('holdingValue')}
-                className="py-3 px-3 text-right cursor-pointer group min-w-[140px]"
+                className="py-2 md:py-2.5 px-1.5 md:px-2 text-right cursor-pointer group min-w-[75px] md:min-w-[90px]"
+                title="Total AUM Exposure"
               >
-                <div className="flex items-center justify-end gap-1 hover:text-slate-900 dark:hover:text-white transition-colors">
-                  <span>Total AUM Exposure</span>
+                <div className="flex items-center justify-end gap-0.5 hover:text-slate-900 dark:hover:text-white transition-colors">
+                  <span className="truncate">AUM Exposure</span>
                   {renderSortIcon('holdingValue')}
                 </div>
               </th>
@@ -153,60 +155,61 @@ export default function StockWeightageTable({
                   <tr
                     key={stock.symbol}
                     onClick={() => onSelectStock(stock)}
-                    className={`cursor-pointer transition-colors duration-150 select-none ${
+                    className={`cursor-pointer transition-colors duration-150 select-none group ${
                       isSelected 
                         ? 'bg-[#F0F7FF] dark:bg-blue-950/30 border-l-[3.5px] border-l-[#2563EB]' 
                         : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40 border-l-[3.5px] border-l-transparent'
                     }`}
                   >
                     {/* # Rank */}
-                    <td className="py-2.5 px-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    <td className={`py-1.5 md:py-2 px-1 md:px-1.5 text-center text-[10px] md:text-xs font-semibold text-slate-500 dark:text-slate-400 w-6 min-w-6 max-w-6 md:w-8 md:min-w-8 md:max-w-8 sticky left-0 z-10 ${
+                      isSelected ? 'bg-[#F0F7FF] dark:bg-blue-950/60' : 'bg-white dark:bg-[var(--bg-card)] group-hover:bg-slate-50/80 dark:group-hover:bg-slate-800/40'
+                    }`}>
                       {stock.rank}
                     </td>
 
-                    {/* Stock with Logo, Name and Symbol */}
-                    <td className="py-2 px-3">
-                      <div className="flex items-center gap-2.5">
-                        <BrandLogo symbol={stock.symbol} name={stock.name} size="md" />
-                        <div className="min-w-0">
-                          <div className="font-bold text-slate-900 dark:text-white truncate max-w-[170px] text-xs leading-snug">
-                            {stock.name}
-                          </div>
-                          <div className="text-[10.5px] font-mono font-medium text-slate-400 dark:text-slate-500">
-                            {stock.symbol}
-                          </div>
+                    {/* Stock Name and Symbol (Logo removed for compact fit without scrolling) */}
+                    <td className={`py-1.5 md:py-2 px-1.5 md:px-2.5 min-w-[80px] max-w-[95px] md:min-w-[125px] md:max-w-none sticky left-6 md:left-8 z-10 border-r border-slate-200 dark:border-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)] ${
+                      isSelected ? 'bg-[#F0F7FF] dark:bg-blue-950/60' : 'bg-white dark:bg-[var(--bg-card)] group-hover:bg-slate-50/80 dark:group-hover:bg-slate-800/40'
+                    }`}>
+                      <div className="min-w-0">
+                        <div className="font-bold text-slate-900 dark:text-white truncate max-w-[75px] sm:max-w-[95px] md:max-w-[160px] text-[10.5px] md:text-[11.5px] leading-tight" title={stock.name}>
+                          {stock.name}
+                        </div>
+                        <div className="text-[9px] md:text-[10px] font-mono font-medium text-slate-400 dark:text-slate-500 truncate">
+                          {stock.symbol}
                         </div>
                       </div>
                     </td>
 
                     {/* Sector */}
-                    <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300 text-xs font-medium">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 border border-slate-200/70 dark:border-slate-700/60 max-w-[150px] truncate" title={stock.sector}>
+                    <td className="py-1.5 md:py-2 px-1.5 md:px-2 text-slate-700 dark:text-slate-300 font-medium">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] md:text-[10.5px] font-medium bg-slate-100 dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 border border-slate-200/70 dark:border-slate-700/60 max-w-[85px] md:max-w-[120px] truncate" title={stock.sector}>
                         {stock.sector || 'Diversified'}
                       </span>
                     </td>
 
                     {/* Number of Funds Holdings */}
-                    <td className="py-2.5 px-3 text-center">
-                      <div className="inline-flex flex-col items-center">
-                        <span className="font-extrabold text-[13.5px] text-[#059669] dark:text-emerald-400 leading-tight">
+                    <td className="py-1.5 md:py-2 px-1 md:px-2 text-center">
+                      <div className="inline-flex flex-col items-center leading-tight">
+                        <span className="font-extrabold text-[12px] md:text-[13px] text-[#059669] dark:text-emerald-400 leading-tight">
                           {stock.mutualFundsHolding?.toLocaleString('en-IN') || 0}
                         </span>
                         {stock.totalUniverseFunds ? (
-                          <span className="text-[9.5px] font-medium text-slate-400 dark:text-slate-500 leading-tight">
-                            of {stock.totalUniverseFunds} funds
+                          <span className="text-[8.5px] md:text-[9px] font-medium text-slate-400 dark:text-slate-500 leading-tight">
+                            of {stock.totalUniverseFunds}
                           </span>
                         ) : null}
                       </div>
                     </td>
 
                     {/* MF Universe Weightage */}
-                    <td className="py-2.5 px-3 text-right">
-                      <div className="flex flex-col items-end justify-center">
-                        <span className="font-mono font-bold text-slate-900 dark:text-white text-[12px] leading-tight">
+                    <td className="py-1.5 md:py-2 px-1 md:px-2 text-right">
+                      <div className="flex flex-col items-end justify-center leading-tight">
+                        <span className="font-mono font-bold text-slate-900 dark:text-white text-[11px] md:text-[11.5px] leading-tight">
                           {universeWeight != null ? `${universeWeight.toFixed(2)}%` : '—'}
                         </span>
-                        <div className="w-16 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mt-1">
+                        <div className="w-12 md:w-14 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mt-0.5">
                           <div 
                             className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full transition-all" 
                             style={{ width: `${Math.min(100, Math.max(4, (universeWeight || 0) * 20))}%` }}
@@ -216,7 +219,7 @@ export default function StockWeightageTable({
                     </td>
 
                     {/* Total AUM Exposure */}
-                    <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 dark:text-white text-[12px]">
+                    <td className="py-1.5 md:py-2 px-1.5 md:px-2 text-right font-mono font-bold text-slate-900 dark:text-white text-[11px] md:text-[11.5px]">
                       {formatCurrencyCr(stock.totalAumExposureCr ?? stock.totalHoldingValueCr)}
                     </td>
                   </tr>

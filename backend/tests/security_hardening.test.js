@@ -80,12 +80,12 @@ async function runSecuritySuite() {
     try {
       await User.updateOne(
         { _id: '60c72b2f9b1d8b2bad000001' },
-        { $set: { email: 'owner@marketpulse.in', name: 'Portfolio Owner', role: 'user', isRevoked: false } },
+        { $set: { email: 'owner@marketpulse.in', name: 'Portfolio Owner', role: 'user', isRevoked: false, isEmailVerified: true, status: 'active' } },
         { upsert: true }
       );
       await User.updateOne(
         { _id: '60c72b2f9b1d8b2bad000009' },
-        { $set: { email: 'logout.user@marketpulse.in', name: 'Logout User', role: 'user', isRevoked: false } },
+        { $set: { email: 'logout.user@marketpulse.in', name: 'Logout User', role: 'user', isRevoked: false, isEmailVerified: true, status: 'active' } },
         { upsert: true }
       );
     } catch (e) {}

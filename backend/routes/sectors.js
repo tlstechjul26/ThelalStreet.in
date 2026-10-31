@@ -4,11 +4,12 @@ import etfService, { INDIAN_ETF_UNIVERSE } from '../services/ETFService.js';
 
 const router = express.Router();
 
-// GET /api/sectors?region=india|global|all&timeframe=1D|1W|1M|YTD
+// GET /api/sectors?region=india|global|all&timeframe=1D|1W|1M|YTD&includeStocks=true|false
 router.get('/', async (req, res) => {
   try {
-    const { region = 'all', timeframe = '1D', assetClass = 'stocks' } = req.query;
-    const sectors = await sectorDataService.getAllSectors(region, timeframe, assetClass);
+    const { region = 'all', timeframe = '1D', assetClass = 'stocks', includeStocks } = req.query;
+    const shouldIncludeStocks = includeStocks === 'true';
+    const sectors = await sectorDataService.getAllSectors(region, timeframe, assetClass, shouldIncludeStocks);
     res.json(sectors);
   } catch (err) {
     console.error('Sectors fetch error:', err.message);
@@ -224,11 +225,11 @@ router.get('/search', async (req, res) => {
   });
 });
 
-// GET /api/sectors/all-stocks?region=india|global|all&timeframe=1D|1W|1M|1Y|5Y|ALL
+// GET /api/sectors/all-stocks?region=india|global|all&timeframe=1D|1W|1M|1Y|5Y|ALL&page=1&limit=50&search=...
 router.get('/all-stocks', async (req, res) => {
   try {
-    const { region = 'all', timeframe = '1D', assetClass = 'stocks' } = req.query;
-    const stocks = await sectorDataService.getAllRankedStocks(region, timeframe, assetClass);
+    const { region = 'all', timeframe = '1D', assetClass = 'stocks', page, limit, search, sortBy, sortOrder } = req.query;
+    const stocks = await sectorDataService.getAllRankedStocks(region, timeframe, assetClass, { page, limit, search, sortBy, sortOrder });
     res.json(stocks);
   } catch (err) {
     console.error('All ranked stocks fetch error:', err.message);

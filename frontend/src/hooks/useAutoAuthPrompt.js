@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAuthModalOpen, setAuthModalTab } from '../store/slices/authSlice';
 
-const INITIAL_DELAY_MS = 300000; // 5 minutes of initial site usage
-const REPEAT_DELAY_MS = 120000;  // 2 minutes repeat interval if dismissed
+const INITIAL_DELAY_MS = 15 * 60 * 1000; // 15 minutes of initial site usage (900,000 ms)
+const REPEAT_DELAY_MS = 15 * 60 * 1000;  // 15 minutes repeat interval if dismissed (900,000 ms)
 const STORAGE_START_KEY = 'thelalstreet_unauth_start_time';
 const STORAGE_TRIGGERED_KEY = 'thelalstreet_auth_prompt_triggered';
 
@@ -33,10 +33,10 @@ const safeStorage = {
 
 /**
  * useAutoAuthPrompt:
- * 1. Shows a login popup after 5 minutes of website use if user is not logged in (new user).
+ * 1. Shows a login popup after 15 minutes of website use if user is not logged in (new user).
  * 2. If user logs in, the popup is immediately removed/closed and no timers run.
- * 3. If user logs out, after 5 minutes of being logged out the popup appears again,
- *    and if closed/dismissed without logging in, it reappears every 2 minutes repeatedly.
+ * 3. If user logs out, after 15 minutes of being logged out the popup appears again,
+ *    and if closed/dismissed without logging in, it reappears every 15 minutes repeatedly.
  */
 export default function useAutoAuthPrompt() {
   const dispatch = useDispatch();
@@ -46,7 +46,7 @@ export default function useAutoAuthPrompt() {
 
   // Track login/logout transitions
   useEffect(() => {
-    // User logged out: reset 1-minute timer from logout moment
+    // User logged out: reset 15-minute timer from logout moment
     if (prevAuthRef.current && !isAuthenticated) {
       safeStorage.setItem(STORAGE_START_KEY, String(Date.now()));
       safeStorage.removeItem(STORAGE_TRIGGERED_KEY);
@@ -98,13 +98,13 @@ export default function useAutoAuthPrompt() {
       if (remainingInitial > 0) {
         delayMs = remainingInitial;
       } else {
-        // 5-minute initial duration has elapsed
+        // 15-minute initial duration has elapsed
         safeStorage.setItem(STORAGE_TRIGGERED_KEY, 'true');
         delayMs = 0;
       }
     } else {
-      // 5-minute initial period has passed and popup was dismissed without logging in;
-      // re-trigger every 2 minutes repeatedly
+      // 15-minute initial period has passed and popup was dismissed without logging in;
+      // re-trigger every 15 minutes repeatedly
       delayMs = REPEAT_DELAY_MS;
     }
 

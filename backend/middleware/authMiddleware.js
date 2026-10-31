@@ -109,8 +109,14 @@ export async function authenticateToken(req, res, next) {
       return res.status(403).json({ error: 'Two-factor authentication required. Please complete 2FA verification.' });
     }
 
+    // Block unverified email tokens from accessing protected routes
+    if (decoded.stage === 'email_verification_pending') {
+      return res.status(403).json({ error: 'Email verification required. Please verify your email.', requiresVerification: true });
+    }
+
     const isDbConnected = mongoose.connection && mongoose.connection.readyState === 1;
     const isLogout = req.path === '/logout' || req.originalUrl?.endsWith('/logout');
+    const isVerificationEndpoint = req.path === '/verify-email' || req.originalUrl?.endsWith('/verify-email') || req.path === '/resend-otp' || req.originalUrl?.endsWith('/resend-otp');
     const isSensitiveOperation = !isLogout && req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS';
 
     // Fail-closed for sensitive / mutating operations when DB is unavailable
@@ -120,30 +126,41 @@ export async function authenticateToken(req, res, next) {
       });
     }
 
-    // Live account existence and revocation check when DB is online
+    // Live account existence, revocation and verification check when DB is online
     if (isDbConnected && (decoded.id || decoded.email)) {
       try {
         let user = null;
         if (decoded.id) {
           try {
-            user = await User.findById(decoded.id).select('role isRevoked');
+            user = await User.findById(decoded.id).select('role isRevoked isEmailVerified status email');
           } catch (idErr) {
             // In case decoded.id threw an error (e.g. cast error)
             if (decoded.email) {
-              user = await User.findOne({ email: decoded.email.toLowerCase().trim() }).select('role isRevoked');
+              user = await User.findOne({ email: decoded.email.toLowerCase().trim() }).select('role isRevoked isEmailVerified status email');
             }
           }
         } else if (decoded.email) {
-          user = await User.findOne({ email: decoded.email.toLowerCase().trim() }).select('role isRevoked');
+          user = await User.findOne({ email: decoded.email.toLowerCase().trim() }).select('role isRevoked isEmailVerified status email');
         }
 
         if (!user) {
           return res.status(401).json({ error: 'User account no longer exists. Please log in again.' });
         }
-        if (user.isRevoked) {
+        if (user.isRevoked || user.status === 'suspended') {
           return res.status(401).json({ error: 'User account has been revoked.' });
         }
+
+        // Enforce email verification on protected features
+        if (!isLogout && !isVerificationEndpoint && user.isEmailVerified === false) {
+          return res.status(403).json({
+            error: 'Email verification required. Please verify your email address to access this feature.',
+            requiresVerification: true,
+            email: user.email
+          });
+        }
+
         decoded.role = user.role || decoded.role || 'user';
+        decoded.isEmailVerified = user.isEmailVerified !== false;
       } catch (dbErr) {
         if (isSensitiveOperation) {
           return res.status(503).json({

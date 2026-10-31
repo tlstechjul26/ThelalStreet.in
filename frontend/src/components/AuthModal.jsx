@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { 
   setCredentials, 
@@ -21,10 +21,29 @@ export default function AuthModal() {
   const [name, setName] = useState('');
   const [localError, setLocalError] = useState('');
 
+  // Email OTP Verification state
+  const [stepEmailOtp, setStepEmailOtp] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [devOtp, setDevOtp] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendSuccess, setResendSuccess] = useState('');
+
   // Two-Factor Authentication state
   const [step2fa, setStep2fa] = useState(false);
   const [tempToken, setTempToken] = useState('');
   const [totpCode, setTotpCode] = useState('');
+
+  // 60-second cooldown timer for Resend OTP
+  useEffect(() => {
+    let timer;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   if (!authModalOpen) return null;
 
@@ -36,6 +55,12 @@ export default function AuthModal() {
     setEmail('');
     setPassword('');
     setName('');
+    setStepEmailOtp(false);
+    setVerificationEmail('');
+    setOtpCode('');
+    setDevOtp('');
+    setResendCooldown(0);
+    setResendSuccess('');
     setStep2fa(false);
     setTempToken('');
     setTotpCode('');
@@ -44,6 +69,12 @@ export default function AuthModal() {
   const handleTabSwitch = (tab) => {
     dispatch(setAuthModalTab(tab));
     setLocalError('');
+    setStepEmailOtp(false);
+    setVerificationEmail('');
+    setOtpCode('');
+    setDevOtp('');
+    setResendCooldown(0);
+    setResendSuccess('');
     setStep2fa(false);
     setTempToken('');
     setTotpCode('');
@@ -52,6 +83,7 @@ export default function AuthModal() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLocalError('');
+    setResendSuccess('');
 
     if (!email || !password) {
       setLocalError('Please fill in all required fields.');
@@ -71,6 +103,19 @@ export default function AuthModal() {
 
       const res = await axios.post(endpoint, payload);
       
+      // Handle Email Verification Challenge Response
+      if (res.data && res.data.requiresVerification) {
+        setStepEmailOtp(true);
+        setVerificationEmail(res.data.email || email);
+        if (res.data.devOtp) {
+          setDevOtp(res.data.devOtp);
+        }
+        setResendCooldown(60);
+        setLocalError('');
+        setResendSuccess(res.data.message || 'Verification code sent to your email.');
+        return;
+      }
+
       // Handle 2FA Challenge Response
       if (res.data && res.data.requires2fa) {
         setStep2fa(true);
@@ -93,11 +138,78 @@ export default function AuthModal() {
         setLocalError('Unexpected response from server.');
       }
     } catch (err) {
+      if (err.response?.data?.requiresVerification) {
+        setStepEmailOtp(true);
+        setVerificationEmail(err.response.data.email || email);
+        if (err.response.data.devOtp) {
+          setDevOtp(err.response.data.devOtp);
+        }
+        setResendCooldown(60);
+        setLocalError(err.response.data.error || 'Email verification required.');
+        return;
+      }
       const msg = err.response?.data?.error || err.response?.data?.details || err.message || 'Authentication failed';
       setLocalError(msg);
       dispatch(setError(msg));
     } finally {
       dispatch(setLoading(false));
+    }
+  };
+
+  const handleVerifyEmailOtp = async (e) => {
+    e.preventDefault();
+    setLocalError('');
+    setResendSuccess('');
+
+    if (!otpCode || otpCode.trim().length !== 6) {
+      setLocalError('Please enter a valid 6-digit verification code.');
+      return;
+    }
+
+    dispatch(setLoading(true));
+    try {
+      const res = await axios.post(`${API_BASE}/auth/verify-email`, {
+        email: verificationEmail,
+        code: otpCode.trim()
+      });
+
+      if (res.data && res.data.token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+        dispatch(setCredentials({ token: res.data.token, user: res.data.user }));
+        handleClose();
+      } else {
+        setLocalError('Verification failed. Please try again.');
+      }
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || 'Invalid or expired verification code.';
+      setLocalError(msg);
+      dispatch(setError(msg));
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || loading) return;
+    setLocalError('');
+    setResendSuccess('');
+
+    try {
+      const res = await axios.post(`${API_BASE}/auth/resend-otp`, {
+        email: verificationEmail
+      });
+
+      if (res.data?.devOtp) {
+        setDevOtp(res.data.devOtp);
+      }
+      setResendCooldown(60);
+      setResendSuccess(res.data.message || 'A new verification code has been sent.');
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || 'Failed to resend verification code.';
+      if (err.response?.data?.cooldownSeconds) {
+        setResendCooldown(err.response.data.cooldownSeconds);
+      }
+      setLocalError(msg);
     }
   };
 
@@ -160,16 +272,24 @@ export default function AuthModal() {
         >
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-blue-600/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
-              {step2fa ? <ShieldCheck size={18} /> : <User size={18} />}
+              {stepEmailOtp ? <Mail size={18} /> : step2fa ? <ShieldCheck size={18} /> : <User size={18} />}
             </div>
             <div>
               <h3 className="font-display font-bold text-base leading-tight" style={{ color: 'var(--text-primary)' }}>
-                {step2fa ? 'Two-Factor Authentication' : isLogin ? 'Sign In to The lal Street' : 'Create an Account'}
+                {stepEmailOtp 
+                  ? 'Verify Your Email' 
+                  : step2fa 
+                    ? 'Two-Factor Authentication' 
+                    : isLogin 
+                      ? 'Sign In to The lal Street' 
+                      : 'Create an Account'}
               </h3>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                {step2fa 
-                  ? 'Enter 6-digit code from Google Authenticator'
-                  : isLogin ? 'Access market analytics & watchlists' : 'Track live markets & portfolios'}
+                {stepEmailOtp 
+                  ? `Enter code sent to ${verificationEmail || 'your email'}`
+                  : step2fa 
+                    ? 'Enter 6-digit code from Google Authenticator'
+                    : isLogin ? 'Access market analytics & watchlists' : 'Track live markets & portfolios'}
               </p>
             </div>
           </div>
@@ -191,7 +311,90 @@ export default function AuthModal() {
             </div>
           )}
 
-          {step2fa ? (
+          {/* Success Banner */}
+          {resendSuccess && (
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs">
+              <ShieldCheck size={16} className="shrink-0 mt-0.5" />
+              <span className="leading-relaxed">{resendSuccess}</span>
+            </div>
+          )}
+
+          {stepEmailOtp ? (
+            /* Email OTP Verification View */
+            <form onSubmit={handleVerifyEmailOtp} className="flex flex-col gap-4">
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
+                  6-Digit Verification Code
+                </label>
+                <div className="relative">
+                  <KeyRound size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    maxLength={6}
+                    inputMode="numeric"
+                    placeholder="e.g. 123456"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl text-center text-lg font-mono tracking-widest font-bold border focus:outline-none focus:ring-1 transition-colors"
+                    style={{
+                      background: 'var(--bg-primary)',
+                      borderColor: 'var(--border-color)',
+                      color: 'var(--text-primary)',
+                      '--tw-ring-color': 'var(--accent)'
+                    }}
+                  />
+                </div>
+                <p className="text-[11px] mt-1.5" style={{ color: 'var(--text-muted)' }}>
+                  Code expires in 5 minutes. Check your inbox and spam folder.
+                </p>
+              </div>
+
+
+              <button
+                type="submit"
+                disabled={loading || otpCode.length !== 6}
+                className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50 active:scale-[0.99]"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Verifying...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Verify & Activate</span>
+                    <ArrowRight size={16} />
+                  </>
+                )}
+              </button>
+
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  disabled={resendCooldown > 0 || loading}
+                  onClick={handleResendOtp}
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50 disabled:no-underline"
+                >
+                  {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend verification code'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStepEmailOtp(false);
+                    setLocalError('');
+                    setResendSuccess('');
+                  }}
+                  className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center gap-1 transition-colors"
+                >
+                  <ArrowLeft size={12} />
+                  <span>Back to Sign In</span>
+                </button>
+              </div>
+            </form>
+          ) : step2fa ? (
             /* 2FA Verification View */
             <form onSubmit={handleVerify2fa} className="flex flex-col gap-4">
               <div>

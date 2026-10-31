@@ -13,6 +13,7 @@ import {
 import { setAuthModalOpen, logout } from '../store/slices/authSlice';
 import { Search, Sun, Moon, AlertTriangle, X, TrendingUp, Grid3X3, User, Menu, LogOut, Layers, PieChart } from 'lucide-react';
 import axios from 'axios';
+import ProfileModal from './ProfileModal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -28,11 +29,12 @@ export default function Header() {
   const [searching, setSearching] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const searchRef = useRef(null);
   const userMenuRef = useRef(null);
   const debounceRef = useRef(null);
 
-  // Close search & user dropdown on outside click
+  // Close search & user dropdown on outside click or touch
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (searchRef.current && !searchRef.current.contains(e.target)) {
@@ -43,7 +45,11 @@ export default function Header() {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   // Debounced search
@@ -206,7 +212,7 @@ export default function Header() {
     (results.sectors && results.sectors.length > 0);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b overflow-x-hidden" style={{ borderColor: 'var(--border-color)', background: 'var(--bg-primary)', backdropFilter: 'blur(12px)' }}>
+    <header className="sticky top-0 z-50 w-full border-b" style={{ borderColor: 'var(--border-color)', background: 'var(--bg-primary)', backdropFilter: 'blur(12px)' }}>
       <div className="max-w-[1600px] mx-auto px-3 sm:px-4 md:px-6 w-full">
         {/* Main header row */}
         <div className="flex items-center justify-between h-14 sm:h-16 gap-2 sm:gap-6 w-full min-w-0">
@@ -433,14 +439,15 @@ export default function Header() {
             {/* User profile avatar matching mockup */}
             <div ref={userMenuRef} className="relative">
               <button 
+                type="button"
                 onClick={() => {
                   if (!isAuthenticated) {
                     dispatch(setAuthModalOpen(true));
                   } else {
-                    setUserMenuOpen(!userMenuOpen);
+                    setUserMenuOpen(prev => !prev);
                   }
                 }}
-                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all ${
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all cursor-pointer ${
                   isAuthenticated 
                     ? 'bg-blue-600 text-white font-bold text-xs shadow-xs hover:bg-blue-700' 
                     : 'bg-blue-600/10 text-blue-600 dark:text-blue-400 hover:bg-blue-600/20'
@@ -457,22 +464,52 @@ export default function Header() {
               {/* User Dropdown Menu */}
               {userMenuOpen && isAuthenticated && (
                 <div 
-                  className="absolute right-0 top-full mt-2 w-56 rounded-xl shadow-2xl border p-2 z-50 animate-in fade-in zoom-in-95 duration-150"
+                  className="absolute right-0 top-full mt-2 w-60 rounded-xl shadow-2xl border p-2 z-50 animate-in fade-in zoom-in-95 duration-150"
                   style={{ 
                     background: 'var(--bg-card)', 
                     borderColor: 'var(--border-color)',
                     color: 'var(--text-primary)' 
                   }}
                 >
-                  <div className="px-3 py-2 border-b mb-1" style={{ borderColor: 'var(--border-color)' }}>
-                    <p className="text-xs font-bold truncate" style={{ color: 'var(--text-primary)' }}>
-                      {user?.name || 'Investor'}
-                    </p>
-                    <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>
-                      {user?.email}
-                    </p>
-                  </div>
                   <button
+                    type="button"
+                    onClick={() => {
+                      setProfileModalOpen(true);
+                      setUserMenuOpen(false);
+                    }}
+                    className="w-full px-3 py-2 border-b mb-1 text-left rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors"
+                    style={{ borderColor: 'var(--border-color)' }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                        {((user?.name || user?.email || 'U')[0]).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold truncate" style={{ color: 'var(--text-primary)' }}>
+                          {user?.name || 'Investor'}
+                        </p>
+                        <p className="text-[11px] truncate text-[var(--text-muted)]">
+                          {user?.email}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileModalOpen(true);
+                      setUserMenuOpen(false);
+                    }}
+                    className="w-full px-3 py-2 rounded-lg text-left text-xs font-semibold flex items-center gap-2 hover:bg-[var(--bg-card-hover)] transition-colors"
+                    style={{ color: 'var(--text-primary)' }}
+                  >
+                    <User size={14} className="text-blue-600 dark:text-blue-400" />
+                    <span>My Account & Profile</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={handleLogout}
                     className="w-full px-3 py-2 rounded-lg text-left text-xs font-semibold flex items-center gap-2 text-rose-500 hover:bg-rose-500/10 transition-colors"
                   >
@@ -566,11 +603,22 @@ export default function Header() {
                 </button>
               ) : (
                 <div className="flex flex-col gap-1">
-                  <div className="px-3 py-1.5 text-xs">
-                    <span className="text-[var(--text-muted)]">Signed in as </span>
-                    <span className="font-semibold text-[var(--text-primary)]">{user?.email}</span>
-                  </div>
                   <button
+                    type="button"
+                    onClick={() => {
+                      setProfileModalOpen(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full px-3 py-2 rounded-lg text-left text-xs font-semibold flex items-center justify-between hover:bg-[var(--bg-card-hover)] transition-colors"
+                  >
+                    <div>
+                      <p className="font-bold text-[var(--text-primary)]">{user?.name || 'Investor'}</p>
+                      <p className="text-[11px] text-[var(--text-muted)]">{user?.email}</p>
+                    </div>
+                    <span className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold">View Profile</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleLogout}
                     className="w-full px-3 py-2 rounded-lg text-left text-xs font-semibold flex items-center gap-2 text-rose-500 hover:bg-rose-500/10 transition-colors"
                   >
@@ -583,6 +631,12 @@ export default function Header() {
           </div>
         )}
       </div>
+
+      {/* Account Profile Modal */}
+      <ProfileModal 
+        isOpen={profileModalOpen} 
+        onClose={() => setProfileModalOpen(false)} 
+      />
     </header>
   );
 }

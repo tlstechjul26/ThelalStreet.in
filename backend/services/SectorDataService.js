@@ -7,6 +7,7 @@ import marketDataGateway from './MarketDataGateway.js';
 import athBaseService from './AthBaseService.js';
 import { getIndianMarketSession, isFinancialEntity, KNOWN_GLOBAL_SYMBOLS } from './MarketDataValidator.js';
 import { runWithConcurrencyLimit, withTimeout } from '../utils/concurrencyLimiter.js';
+import { STOCK_SNAPSHOTS } from '../config/stockSnapshotData.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -899,6 +900,7 @@ class SectorDataService {
     this.globalRankCache = null;
     this.globalRankCacheTime = 0;
     this.marketCapCache = new Map();
+    this.indexAnalysisCache = new Map();
   }
 
   isCircuitBreakerActive() {
@@ -927,8 +929,8 @@ class SectorDataService {
     setTimeout(async () => {
       try {
         console.log('[SectorDataService] Starting deferred background cache warm-up...');
-        await this.prewarmStockCache();
         await this.warmHistoricalReturns();
+        await this.prewarmStockCache();
         await this.warmFinancialsCache();
       } catch (err) {
         console.warn('[SectorDataService] Background warm-up notice:', err.message);
@@ -942,6 +944,13 @@ class SectorDataService {
   async warmHistoricalReturns() {
     try {
       const symSet = new Set();
+      const topPriorityWarm = [
+        'HDFCBANK.NS', 'RELIANCE.NS', 'TCS.NS', 'ICICIBANK.NS', 'SBIN.NS', 'BHARTIARTL.NS',
+        'KOTAKBANK.NS', 'BAJFINANCE.NS', 'LT.NS', 'INFY.NS', 'HINDUNILVR.NS', 'M&M.NS',
+        'ITC.NS', 'BEL.NS', 'DMART.NS', 'TRENT.NS', 'BSE.NS', 'IDEA.NS'
+      ];
+      topPriorityWarm.forEach(s => symSet.add(s));
+
       ALL_SECTORS.forEach(s => (s.stocks || []).forEach(st => {
         if (st && st.symbol) {
           const isGlobal = s.region === 'global' || KNOWN_GLOBAL_SYMBOLS.has(st.symbol) || (!st.symbol.endsWith('.NS') && !st.symbol.endsWith('.BO') && s.region === 'global');
@@ -949,7 +958,7 @@ class SectorDataService {
           symSet.add(sym);
         }
       }));
-      INDIAN_PRIORITY_SYMBOLS.slice(0, 50).forEach(s => symSet.add(`${s}.NS`));
+      INDIAN_PRIORITY_SYMBOLS.forEach(s => symSet.add(`${s}.NS`));
 
       const symbols = Array.from(symSet);
       console.log(`[SectorDataService] Warming historical returns & ATH metrics for ${symbols.length} constituent & priority stocks...`);
@@ -959,7 +968,7 @@ class SectorDataService {
         if (this.isCircuitBreakerActive()) break;
         const batch = symbols.slice(i, i + BATCH_SIZE);
         await Promise.allSettled(batch.map(sym => yahooFinanceService.getHistoricalAnalysis(sym, this.symbolCache.get(sym)?.data?.ltp)));
-        await new Promise(r => setTimeout(r, 150));
+        await new Promise(r => setTimeout(r, 100));
       }
       console.log(`[SectorDataService] Completed historical returns & ATH metrics warming for constituent stocks.`);
     } catch (err) {
@@ -1184,11 +1193,24 @@ class SectorDataService {
           isStale = true;
         }
       } else if (cacheKey.startsWith('all_ranked_stocks_')) {
-        const stocks = Array.isArray(cached.data) ? cached.data : [];
+        const stocks = Array.isArray(cached.data) ? cached.data : (cached.data?.data || []);
         const firstStock = stocks[0];
         const validQuotes = stocks.filter(s => s && typeof s.ltp === 'number' && s.ltp > 0);
         if (!firstStock || firstStock.indiaStockRank === null || firstStock.globalRank === null || firstStock.ltp === null || validQuotes.length < 50) {
           isStale = true;
+        } else {
+          // If top large cap returns are missing/null in cached dataset but now present in memory cache, mark stale
+          const topCheckSymbols = ['RELIANCE.NS', 'HDFCBANK.NS', 'ICICIBANK.NS', 'SBIN.NS', 'TCS.NS', 'INFY.NS', 'BEL.NS', 'TRENT.NS'];
+          for (const sym of topCheckSymbols) {
+            const cachedRet = yahooFinanceService.returnsCache?.get(sym)?.data || yahooFinanceService.historicalCache?.get(sym)?.data?.returns;
+            if (cachedRet && typeof cachedRet['ALL'] === 'number' && cachedRet['ALL'] !== 0) {
+              const stockInList = stocks.find(s => s.symbol === sym);
+              if (!stockInList || stockInList.returns?.['ALL'] === null || stockInList.returns?.['ALL'] === 0) {
+                isStale = true;
+                break;
+              }
+            }
+          }
         }
       } else if (cacheKey.startsWith('sector_detail_')) {
         const stocks = Array.isArray(cached.data) ? cached.data : (cached.data?.stocks || []);
@@ -1745,8 +1767,30 @@ class SectorDataService {
                        (stock.symbol.endsWith('.NS') ? financialsMap.get(stock.symbol.replace('.NS', '')) : null) ||
                        (stock.symbol.endsWith('.BO') ? financialsMap.get(stock.symbol.replace('.BO', '')) : null) ||
                        this._getFinFromCache(stock.symbol);
-      const stockRets = returnsMap.get(stock.symbol) || (stock.symbol.endsWith('.NS') ? returnsMap.get(stock.symbol.replace('.NS', '')) : null) || { '1W': null, '1M': null, '6M': null, '1Y': null, '3Y': null, '5Y': null, 'ALL': null };
-      const stockAthBase = athBaseMap.get(stock.symbol) || (stock.symbol.endsWith('.NS') ? athBaseMap.get(stock.symbol.replace('.NS', '')) : null);
+      const snapStock = STOCK_SNAPSHOTS[stock.symbol] || 
+                        (stock.symbol.endsWith('.NS') ? STOCK_SNAPSHOTS[stock.symbol.replace('.NS', '')] : null) || 
+                        (!stock.symbol.endsWith('.NS') ? STOCK_SNAPSHOTS[`${stock.symbol}.NS`] : null);
+      const snapRets = snapStock?.returns;
+
+      const cachedRets = returnsMap.get(stock.symbol) || 
+                         (stock.symbol.endsWith('.NS') ? returnsMap.get(stock.symbol.replace('.NS', '')) : null) || 
+                         (!stock.symbol.endsWith('.NS') ? returnsMap.get(`${stock.symbol}.NS`) : null);
+
+      let stockRets = { '1W': null, '1M': null, '6M': null, '1Y': null, '3Y': null, '5Y': null, 'ALL': null };
+      ['1W', '1M', '6M', '1Y', '3Y', '5Y', 'ALL'].forEach(p => {
+        const val = (cachedRets && typeof cachedRets[p] === 'number' && !isNaN(cachedRets[p]) && (p !== 'ALL' || cachedRets[p] !== 0))
+          ? cachedRets[p]
+          : (snapRets && typeof snapRets[p] === 'number' && !isNaN(snapRets[p]))
+          ? snapRets[p]
+          : null;
+        stockRets[p] = val;
+      });
+      if (stockRets['ALL'] === null && cachedRets && typeof cachedRets['ALL'] === 'number') {
+        stockRets['ALL'] = cachedRets['ALL'];
+      }
+      const stockAthBase = athBaseMap.get(stock.symbol) || 
+                           (stock.symbol.endsWith('.NS') ? athBaseMap.get(stock.symbol.replace('.NS', '')) : null) ||
+                           (!stock.symbol.endsWith('.NS') ? athBaseMap.get(`${stock.symbol}.NS`) : null);
 
       const isFinStock = isFinancialSector || isFinancialEntity(stock.symbol);
       const resolvedEbit = isFinStock ? null : (stockFin?.ebit ?? quote?.ebit ?? null);
@@ -1976,8 +2020,10 @@ class SectorDataService {
    * @param {string} region - 'india', 'global', or 'all'
    * @param {string} timeframe - '1D', '1W', '1M', 'YTD'
    */
-  async getAllSectors(region = 'all', timeframe = '1D', assetClass = 'stocks') {
-    const cacheKey = `sectors_${region}_${timeframe}_${assetClass}`;
+  async getAllSectors(region = 'all', timeframe = '1D', assetClass = 'stocks', includeStocks = false) {
+    const cacheKey = includeStocks 
+      ? `sectors_${region}_${timeframe}_${assetClass}_full`
+      : `sectors_${region}_${timeframe}_${assetClass}`;
     return this._getCachedOrFetch(cacheKey, async () => {
       // Filter sectors by region and assetClass
       let sectors = ALL_SECTORS.filter(s => (s.assetClass || 'stocks') === assetClass);
@@ -2071,26 +2117,46 @@ class SectorDataService {
       if (!this.isCircuitBreakerActive() && uniquePrimaryTickers.length > 0) {
         let failedIndices = 0;
         const indexTasks = uniquePrimaryTickers.map((ticker) => async () => {
-          if (this.isCircuitBreakerActive()) return;
+          if (this.isCircuitBreakerActive()) {
+            const cached = this.indexAnalysisCache.get(ticker) || yahooFinanceService.historicalCache.get(ticker)?.data;
+            if (cached) indexAnalysisMap.set(ticker, cached);
+            return;
+          }
           try {
             const ltp = primaryQuoteMap.get(ticker)?.ltp;
-            const analysis = await withTimeout(yahooFinanceService.getHistoricalAnalysis(ticker, ltp), 3500, null);
+            let analysis = await withTimeout(yahooFinanceService.getHistoricalAnalysis(ticker, ltp), 6000, null);
+            if (!analysis || (!Object.values(analysis.returns || {}).some(v => v !== null) && !analysis.athBase)) {
+              analysis = this.indexAnalysisCache.get(ticker) || yahooFinanceService.historicalCache.get(ticker)?.data || null;
+            }
             if (analysis && (Object.values(analysis.returns || {}).some(v => v !== null) || analysis.athBase)) {
               indexAnalysisMap.set(ticker, analysis);
+              this.indexAnalysisCache.set(ticker, analysis);
+              const clean = ticker.replace(/\.(NS|BO)$/i, '');
+              this.indexAnalysisCache.set(clean, analysis);
             } else {
               failedIndices++;
             }
           } catch (e) {
-            failedIndices++;
+            const fallback = this.indexAnalysisCache.get(ticker) || yahooFinanceService.historicalCache.get(ticker)?.data;
+            if (fallback) {
+              indexAnalysisMap.set(ticker, fallback);
+            } else {
+              failedIndices++;
+            }
           }
         });
         await runWithConcurrencyLimit(indexTasks, 8);
         if (failedIndices > 0) {
           console.warn(`[SectorDataService] ${failedIndices}/${uniquePrimaryTickers.length} index fetches failed, using cached data.`);
-          if (failedIndices === uniquePrimaryTickers.length) {
-            this.tripCircuitBreaker('all index historical fetches failed');
+          if (failedIndices === uniquePrimaryTickers.length && this.indexAnalysisCache.size === 0) {
+            this.tripCircuitBreaker('all index historical fetches failed and no cache');
           }
         }
+      } else {
+        uniquePrimaryTickers.forEach(ticker => {
+          const cached = this.indexAnalysisCache.get(ticker) || yahooFinanceService.historicalCache.get(ticker)?.data;
+          if (cached) indexAnalysisMap.set(ticker, cached);
+        });
       }
 
       // ──────────────────────────────────────────────────────
@@ -2153,12 +2219,17 @@ class SectorDataService {
           // Official index instrument data
           const primaryTicker = primaryTickerMap.get(sector.id) || null;
           const indexQuote = primaryTicker ? primaryQuoteMap.get(primaryTicker) : null;
-          const indexAnalysis = primaryTicker ? indexAnalysisMap.get(primaryTicker) : null;
+          const cachedIndexAnalysis = primaryTicker ? (this.indexAnalysisCache?.get(primaryTicker) || yahooFinanceService.historicalCache?.get(primaryTicker)?.data) : null;
+          const indexAnalysis = (primaryTicker ? indexAnalysisMap.get(primaryTicker) : null) || cachedIndexAnalysis || null;
           const indexReturns = indexAnalysis?.returns || null;
           const athBase = indexAnalysis?.athBase || null;
 
-          // Official index prices (never constituent averages)
-          const indexPrice = (indexQuote && typeof indexQuote.ltp === 'number' && indexQuote.ltp > 0) ? indexQuote.ltp : null;
+          // Official index prices (with fallback to quote price if ltp not set)
+          const indexPrice = (indexQuote && typeof indexQuote.ltp === 'number' && indexQuote.ltp > 0)
+            ? indexQuote.ltp 
+            : (indexQuote && typeof indexQuote.price === 'number' && indexQuote.price > 0)
+            ? indexQuote.price
+            : null;
           const previousClose = (indexQuote && typeof indexQuote.previousClose === 'number' && indexQuote.previousClose > 0) ? indexQuote.previousClose : null;
           const open = (indexQuote && typeof indexQuote.open === 'number' && indexQuote.open > 0) ? indexQuote.open : null;
           const dayHigh = (indexQuote && typeof indexQuote.dayHigh === 'number' && indexQuote.dayHigh > 0) ? indexQuote.dayHigh : null;
@@ -2173,11 +2244,27 @@ class SectorDataService {
           const indexEps = (indexQuote && typeof indexQuote.eps === 'number') ? indexQuote.eps : null;
           const indexVolume = (indexQuote && typeof indexQuote.volume === 'number' && indexQuote.volume > 0) ? indexQuote.volume : null;
 
-          // Index multi-period returns
+          // Index multi-period returns (with resilient fallback to persistent cache or constituent stock returns)
           const sectorReturns = {};
           ['1W', '1M', '6M', '1Y', '3Y', '5Y', 'ALL'].forEach(p => {
-            const hasIndexVal = indexReturns && typeof indexReturns[p] === 'number' && !isNaN(indexReturns[p]);
-            sectorReturns[p] = hasIndexVal ? indexReturns[p] : null;
+            let val = (indexReturns && typeof indexReturns[p] === 'number' && !isNaN(indexReturns[p]) && (p !== 'ALL' || indexReturns[p] !== 0))
+              ? indexReturns[p]
+              : null;
+            if (val === null && primaryTicker) {
+              const cachedAnalysis = this.indexAnalysisCache?.get(primaryTicker);
+              if (cachedAnalysis?.returns && typeof cachedAnalysis.returns[p] === 'number' && !isNaN(cachedAnalysis.returns[p])) {
+                val = cachedAnalysis.returns[p];
+              }
+            }
+            if (val === null) {
+              const validConstituentReturns = validStocks
+                .map(s => s.returns && s.returns[p])
+                .filter(v => typeof v === 'number' && !isNaN(v));
+              if (validConstituentReturns.length > 0) {
+                val = parseFloat((validConstituentReturns.reduce((sum, v) => sum + v, 0) / validConstituentReturns.length).toFixed(2));
+              }
+            }
+            sectorReturns[p] = val;
           });
 
           // Sector change percent
@@ -2255,10 +2342,10 @@ class SectorDataService {
             unchanged,
             unknown,
             totalValidStocks: stocksWithQuotes.length,
-            advancingStocks,
-            decliningStocks,
-            unchangedStocks,
-            unknownStocks,
+            advancingStocks: includeStocks ? advancingStocks : [],
+            decliningStocks: includeStocks ? decliningStocks : [],
+            unchangedStocks: includeStocks ? unchangedStocks : [],
+            unknownStocks: includeStocks ? unknownStocks : [],
             totalStocks: validStocks.length,
             configuredStocks: sector.stocks.length,
             validStocks: validStocks.length,
@@ -2270,7 +2357,7 @@ class SectorDataService {
             revenueQuarterly: null,
             netProfit: totalNetProfit,
 
-            stocks: stocksWithQuotes
+            stocks: includeStocks ? stocksWithQuotes : []
           });
         } catch (err) {
           console.error(`Error processing sector ${sector.id}:`, err.message);
@@ -2510,9 +2597,9 @@ class SectorDataService {
    * Returns the entire Stocks Performance universe as a deduplicated, globally ranked list of stocks.
    * Sorted strictly by globalRank ASC (1..N), with unranked at end.
    */
-  async getAllRankedStocks(region = 'all', timeframe = '1D', assetClass = 'stocks') {
+  async getAllRankedStocks(region = 'all', timeframe = '1D', assetClass = 'stocks', options = {}) {
     const cacheKey = `all_ranked_stocks_${region}_${timeframe}_${assetClass}`;
-    return this._getCachedOrFetch(cacheKey, async () => {
+    const allStocks = await this._getCachedOrFetch(cacheKey, async () => {
       let sectors = ALL_SECTORS.filter(s => (s.assetClass || 'stocks') === assetClass);
       if (region === 'india') {
         sectors = sectors.filter(s => s.region === 'india');
@@ -2731,17 +2818,32 @@ class SectorDataService {
         const topRankedSymbols = Array.from(globalRankMap.entries())
           .filter(([s, rank]) => typeof rank === 'number' && rank <= 100)
           .sort((a, b) => a[1] - b[1])
-          .map(([s]) => (s.endsWith('.NS') || s.endsWith('.BO') || isGlobal || KNOWN_GLOBAL_SYMBOLS.has(s) ? s : `${s}.NS`));
+          .map(([s]) => s);
+
+        const topIndianLargeCaps = [
+          'HDFCBANK.NS', 'RELIANCE.NS', 'TCS.NS', 'BHARTIARTL.NS', 'ICICIBANK.NS', 'INFY.NS', 'SBIN.NS', 'KOTAKBANK.NS', 'AXISBANK.NS', 'LT.NS',
+          'BAJFINANCE.NS', 'M&M.NS', 'ITC.NS', 'HINDUNILVR.NS', 'BEL.NS', 'DMART.NS', 'TRENT.NS', 'BSE.NS', 'IDEA.NS'
+        ];
 
         // Deduplicate into distinct canonical equities
-        const prioritySymbols = [...new Set([
-          ...topRankedSymbols,
-          ...constituentSymbols.map(s => (s.endsWith('.NS') || s.endsWith('.BO') || isGlobal || KNOWN_GLOBAL_SYMBOLS.has(s) ? s : `${s}.NS`))
-        ])];
+        const canonicalSet = new Set();
+        const addCanonical = (s) => {
+          if (!s) return;
+          const clean = s.replace(/\.(NS|BO)$/i, '');
+          const can = (isGlobal || KNOWN_GLOBAL_SYMBOLS.has(clean)) ? s : `${clean}.NS`;
+          canonicalSet.add(can);
+        };
+
+        topIndianLargeCaps.forEach(addCanonical);
+        INDIAN_PRIORITY_SYMBOLS.forEach(addCanonical);
+        constituentSymbols.forEach(addCanonical);
+        topRankedSymbols.forEach(addCanonical);
+
+        const prioritySymbols = Array.from(canonicalSet);
 
         const missingFin = prioritySymbols.filter(sym => !finMap.has(sym) && !this._getFinFromCache(sym));
         if (missingFin.length > 0) {
-          const toFetch = missingFin.slice(0, 30);
+          const toFetch = missingFin.slice(0, 40);
           const topFinList = await Promise.allSettled(toFetch.map(sym => yahooFinanceService.getStockFinancials(sym)));
           toFetch.forEach((sym, idx) => {
             if (topFinList[idx].status === 'fulfilled' && topFinList[idx].value) {
@@ -2755,27 +2857,29 @@ class SectorDataService {
 
         const missingReturns = prioritySymbols.filter(sym => !returnsMap.has(sym));
         if (missingReturns.length > 0) {
-          const toFetchRets = missingReturns.slice(0, 35);
-          const topRetList = await Promise.allSettled(
-            toFetchRets.map(sym => yahooFinanceService.getHistoricalAnalysis(sym, quoteMap.get(sym)?.ltp))
-          );
-          toFetchRets.forEach((sym, idx) => {
-            if (topRetList[idx].status === 'fulfilled' && topRetList[idx].value) {
-              const res = topRetList[idx].value;
-              if (res.returns) {
-                returnsMap.set(sym, res.returns);
-                const clean = sym.replace(/\.(NS|BO)$/i, '');
-                returnsMap.set(`${clean}.NS`, res.returns);
-                returnsMap.set(clean, res.returns);
+          const toFetchRets = missingReturns.slice(0, 100);
+          const tasks = toFetchRets.map(sym => async () => {
+            try {
+              const res = await withTimeout(yahooFinanceService.getHistoricalAnalysis(sym, quoteMap.get(sym)?.ltp), 5000, null);
+              if (res) {
+                if (res.returns) {
+                  returnsMap.set(sym, res.returns);
+                  const clean = sym.replace(/\.(NS|BO)$/i, '');
+                  returnsMap.set(`${clean}.NS`, res.returns);
+                  returnsMap.set(clean, res.returns);
+                }
+                if (res.athBase) {
+                  athBaseMap.set(sym, res.athBase);
+                  const clean = sym.replace(/\.(NS|BO)$/i, '');
+                  athBaseMap.set(`${clean}.NS`, res.athBase);
+                  athBaseMap.set(clean, res.athBase);
+                }
               }
-              if (res.athBase) {
-                athBaseMap.set(sym, res.athBase);
-                const clean = sym.replace(/\.(NS|BO)$/i, '');
-                athBaseMap.set(`${clean}.NS`, res.athBase);
-                athBaseMap.set(clean, res.athBase);
-              }
+            } catch (e) {
+              // Non-blocking
             }
           });
+          await runWithConcurrencyLimit(tasks, 8);
         }
       }
 
@@ -2804,10 +2908,35 @@ class SectorDataService {
         const quote = quoteMap.get(sym) || null;
         const secMeta = stockSectorMap.get(sym) || { sectorId: 'general', sectorName: 'General', region: 'india' };
         const isFin = secMeta.sectorId.includes('bank') || secMeta.sectorId.includes('fin') || secMeta.sectorId.includes('insurance');
-        const stockRets = returnsMap.get(sym) || 
-                          (sym.endsWith('.NS') ? returnsMap.get(sym.replace('.NS', '')) : null) || 
-                          (!sym.endsWith('.NS') ? returnsMap.get(`${sym}.NS`) : null) || 
-                          { '1W': null, '1M': null, '6M': null, '1Y': null, '3Y': null, '5Y': null, 'ALL': null };
+        const secStock = sectorConstituentMap.get(sym) || 
+                         (sym.endsWith('.NS') ? sectorConstituentMap.get(sym.replace('.NS', '')) : null) || 
+                         (!sym.endsWith('.NS') ? sectorConstituentMap.get(`${sym}.NS`) : null);
+        const secRets = secStock?.returns || secStock?.performance;
+
+        const snapStock = STOCK_SNAPSHOTS[sym] || 
+                          (sym.endsWith('.NS') ? STOCK_SNAPSHOTS[sym.replace('.NS', '')] : null) || 
+                          (!sym.endsWith('.NS') ? STOCK_SNAPSHOTS[`${sym}.NS`] : null);
+        const snapRets = snapStock?.returns;
+
+        const cachedRets = returnsMap.get(sym) || 
+                           (sym.endsWith('.NS') ? returnsMap.get(sym.replace('.NS', '')) : null) || 
+                           (!sym.endsWith('.NS') ? returnsMap.get(`${sym}.NS`) : null);
+
+        let stockRets = { '1W': null, '1M': null, '6M': null, '1Y': null, '3Y': null, '5Y': null, 'ALL': null };
+        ['1W', '1M', '6M', '1Y', '3Y', '5Y', 'ALL'].forEach(p => {
+          const val = (cachedRets && typeof cachedRets[p] === 'number' && !isNaN(cachedRets[p]) && (p !== 'ALL' || cachedRets[p] !== 0))
+            ? cachedRets[p]
+            : (secRets && typeof secRets[p] === 'number' && !isNaN(secRets[p]) && (p !== 'ALL' || secRets[p] !== 0))
+            ? secRets[p]
+            : (snapRets && typeof snapRets[p] === 'number' && !isNaN(snapRets[p]))
+            ? snapRets[p]
+            : null;
+          stockRets[p] = val;
+        });
+        if (stockRets['ALL'] === null) {
+          if (cachedRets && typeof cachedRets['ALL'] === 'number') stockRets['ALL'] = cachedRets['ALL'];
+          else if (secRets && typeof secRets['ALL'] === 'number') stockRets['ALL'] = secRets['ALL'];
+        }
         const fin = finMap.get(sym) || 
                     (sym.endsWith('.NS') ? finMap.get(sym.replace('.NS', '')) : null) || 
                     (!sym.endsWith('.NS') ? finMap.get(`${sym}.NS`) : null) || 
@@ -2871,21 +3000,14 @@ class SectorDataService {
             sectorName: secMeta.sectorName,
             region: secMeta.region,
             indiaStockRank: globalRank,
-            indiaRank: globalRank,
-            indianMarketRank: globalRank,
             globalRank,
-            rank: globalRank,
             marketCap: validMarketCap,
             marketCapCr: validMarketCap ? (validMarketCap > 1e9 ? Math.round(validMarketCap / 10000000) : Math.round(validMarketCap)) : null,
             revenue: resolvedRevenue,
             revenueCr: resolvedRevenue,
             revenueYoY: resolvedRevenueYoY,
-            revenueQuarterly: resolvedRevenueQuarterly,
             netProfit: resolvedNetProfit,
-            netProfitYoY: fin?.netProfitYoY ?? quote?.netProfitYoY ?? null,
-            netProfitQuarterly: fin?.netProfitQuarterly ?? quote?.netProfitQuarterly ?? null,
             ebit: resolvedEbit,
-            currentPrice: quote.ltp,
             price: quote.ltp,
             ltp: quote.ltp,
             open: quote.open,
@@ -2896,29 +3018,18 @@ class SectorDataService {
             fiftyTwoWeekHigh: athBase?.allTimeHigh || quote.high52 || null,
             fiftyTwoWeekLow: athBase?.week52Low || quote.low52 || null,
             week52Low: athBase?.week52Low ?? quote.low52 ?? null,
-            week52LowDate: athBase?.week52LowDate ?? null,
             allTimeHigh: athBase?.allTimeHigh || quote.high52 || null,
-            allTimeHighDate: athBase?.allTimeHighDate || null,
-            ath: athBase?.allTimeHigh || quote.high52 || null,
-            ATH: athBase?.allTimeHigh || quote.high52 || null,
-            ATHDate: athBase?.allTimeHighDate || null,
             percentFrom52WLow: athBase?.percentFrom52WLow ?? athBase?.pctFrom52WLow ?? (quote.ltp && quote.low52 ? Math.round(((quote.ltp - quote.low52) / quote.low52) * 10000) / 100 : null),
             percentFromATH: athBase?.percentFromATH ?? athBase?.pctFromATH ?? (quote.ltp && quote.high52 ? Math.round(((quote.ltp - quote.high52) / quote.high52) * 10000) / 100 : null),
             pctFrom52WLow: athBase?.pctFrom52WLow ?? (quote.ltp && quote.low52 ? Math.round(((quote.ltp - quote.low52) / quote.low52) * 10000) / 100 : null),
             pctFromATH: athBase?.pctFromATH ?? (quote.ltp && quote.high52 ? Math.round(((quote.ltp - quote.high52) / quote.high52) * 10000) / 100 : null),
-            recoveryFromBasePercent: athBase?.pctFrom52WLow ?? (quote.ltp && quote.low52 ? Math.round(((quote.ltp - quote.low52) / quote.low52) * 10000) / 100 : null),
-            distanceFromATHPercent: athBase?.pctFromATH ?? (quote.ltp && quote.high52 ? Math.round(((quote.ltp - quote.high52) / quote.high52) * 10000) / 100 : null),
             pe: (typeof quote?.pe === 'number' && quote.pe > 0) ? quote.pe : (typeof fin?.pe === 'number' && fin.pe > 0 ? fin.pe : (quote?.pe ?? null)),
             eps: (typeof quote?.eps === 'number' && !isNaN(quote.eps)) ? quote.eps : (typeof fin?.eps === 'number' && !isNaN(fin.eps) ? fin.eps : (quote?.eps ?? null)),
             volume: quote.volume,
             returns: stockRets,
-            performance: stockRets,
             source: quote.source || "YAHOO_FINANCE",
-            sourceType: quote.sourceType || "YAHOO_QUOTE",
             dataStatus: quote.dataStatus || (quote.isLive ? "LIVE" : "EOD"),
             isLive: quote.isLive ?? false,
-            priceAsOf: quote.priceAsOf || new Date().toISOString(),
-            fetchedAt: quote.priceAsOf || quote.lastUpdatedAt || new Date().toISOString(),
             lastUpdatedAt: quote.lastUpdatedAt || new Date().toISOString()
           };
         }
@@ -2933,21 +3044,14 @@ class SectorDataService {
           sectorName: secMeta.sectorName,
           region: secMeta.region,
           indiaStockRank: globalRank,
-          indiaRank: globalRank,
-          indianMarketRank: globalRank,
           globalRank,
-          rank: globalRank,
           marketCap: null,
           marketCapCr: null,
           revenue: resolvedRevenue,
           revenueCr: resolvedRevenue,
           revenueYoY: resolvedRevenueYoY,
-          revenueQuarterly: resolvedRevenueQuarterly,
           netProfit: resolvedNetProfit,
-          netProfitYoY: fin?.netProfitYoY ?? quote?.netProfitYoY ?? null,
-          netProfitQuarterly: fin?.netProfitQuarterly ?? quote?.netProfitQuarterly ?? null,
           ebit: resolvedEbit,
-          currentPrice: null,
           price: null,
           ltp: null,
           open: null,
@@ -2958,12 +3062,7 @@ class SectorDataService {
           fiftyTwoWeekHigh: null,
           fiftyTwoWeekLow: null,
           week52Low: null,
-          week52LowDate: null,
           allTimeHigh: null,
-          allTimeHighDate: null,
-          ath: null,
-          ATH: null,
-          ATHDate: null,
           percentFrom52WLow: null,
           percentFromATH: null,
           pctFrom52WLow: null,
@@ -2972,13 +3071,9 @@ class SectorDataService {
           eps: (typeof fin?.eps === 'number' && !isNaN(fin.eps)) ? fin.eps : null,
           volume: null,
           returns: stockRets,
-          performance: stockRets,
           source: "UNAVAILABLE",
-          sourceType: "UNAVAILABLE",
           dataStatus: "UNAVAILABLE",
           isLive: false,
-          priceAsOf: null,
-          fetchedAt: new Date().toISOString(),
           lastUpdatedAt: new Date().toISOString()
         };
       });
@@ -3002,6 +3097,42 @@ class SectorDataService {
 
       return rankedStockList;
     });
+
+    const { page, limit, search, sortBy, sortOrder } = options || {};
+    if (page || limit || search) {
+      let filtered = allStocks;
+      if (search && search.trim()) {
+        const q = search.toLowerCase().trim();
+        filtered = filtered.filter(s => 
+          (s.symbol && s.symbol.toLowerCase().includes(q)) || 
+          (s.name && s.name.toLowerCase().includes(q)) ||
+          (s.companyName && s.companyName.toLowerCase().includes(q))
+        );
+      }
+      if (sortBy) {
+        filtered = [...filtered].sort((a, b) => {
+          let aVal = a[sortBy] ?? -999999;
+          let bVal = b[sortBy] ?? -999999;
+          if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+          if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+          if (aVal < bVal) return sortOrder === 'desc' ? 1 : -1;
+          if (aVal > bVal) return sortOrder === 'desc' ? -1 : 1;
+          return 0;
+        });
+      }
+      const p = Math.max(1, parseInt(page) || 1);
+      const l = Math.max(1, Math.min(200, parseInt(limit) || 50));
+      const start = (p - 1) * l;
+      return {
+        data: filtered.slice(start, start + l),
+        total: filtered.length,
+        page: p,
+        limit: l,
+        totalPages: Math.ceil(filtered.length / l)
+      };
+    }
+
+    return allStocks;
   }
 
   /**

@@ -20,6 +20,9 @@ export default {
         loss: { DEFAULT: '#ef4444', dark: '#dc2626', light: '#f87171', bg: 'rgba(239,68,68,0.1)' },
         neutral: { DEFAULT: '#64748b', light: '#94a3b8' },
         surface: { DEFAULT: '#0f1724', hover: '#162032', border: '#1e293b' },
+        slate: {
+          850: '#172033',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],

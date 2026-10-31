@@ -55,11 +55,10 @@ export default function MutualFundStockWeightageScreener() {
   const [activeFundModalCode, setActiveFundModalCode] = useState(null);
   const [showHowToUseModal, setShowHowToUseModal] = useState(false);
 
-  // 6 Category pills matching reference design
+  // Category pills matching reference design
   const categoryPills = [
     { label: 'All Funds', icon: Building2 },
-    { label: 'Large Cap', icon: Landmark },
-    { label: 'Mid Cap', icon: TrendingUp },
+    { label: 'Large & Mid Cap', icon: Landmark },
     { label: 'Small Cap', icon: Flag },
     { label: 'Contra', icon: Disc },
     { label: 'Value', icon: Star }
@@ -126,8 +125,7 @@ export default function MutualFundStockWeightageScreener() {
     try {
       const params = new URLSearchParams();
       if (cat && cat !== 'All Funds') {
-        const queryCat = cat.includes('Funds') ? cat : `${cat} Funds`;
-        params.set('category', queryCat);
+        params.set('category', cat);
       }
       if (search.trim()) params.set('search', search.trim());
       params.set('limit', 250);
@@ -243,56 +241,6 @@ export default function MutualFundStockWeightageScreener() {
         </button>
       </div>
 
-          {/* ── 3. FILTER BAR (SORT BY & SEARCH BAR) ── */}
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl border bg-white dark:bg-[var(--bg-card)] border-slate-200 dark:border-slate-800 shadow-xs">
-            {/* Sort By */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Sort By</span>
-              <select
-                value={sortBy}
-                onChange={(e) => {
-                  const newSort = e.target.value;
-                  setSortBy(newSort);
-                  fetchStockScreener(1, newSort, sortOrder);
-                }}
-                className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-semibold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
-              >
-                <option value="fundCount">Number of Funds Holdings</option>
-                <option value="universeWeightPct">MF Universe Weightage (%)</option>
-                <option value="holdingValue">Total AUM Exposure</option>
-                <option value="sector">Sector</option>
-                <option value="name">Stock Name</option>
-                <option value="avgWeightage">Avg. Weightage</option>
-              </select>
-            </div>
-
-            {/* Search Input */}
-            <div className="relative min-w-[240px] flex-1 sm:max-w-xs">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search stock (e.g. HDFC Bank, Reliance...)"
-                value={stockSearchQuery}
-                onChange={(e) => {
-                  setStockSearchQuery(e.target.value);
-                  fetchStockScreener(1, sortBy, sortOrder);
-                }}
-                className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-blue-500"
-              />
-              {stockSearchQuery && (
-                <button 
-                  onClick={() => {
-                    setStockSearchQuery('');
-                    fetchStockScreener(1, sortBy, sortOrder);
-                  }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                  title="Clear search"
-                >
-                  <X size={13} />
-                </button>
-              )}
-            </div>
-          </div>
 
           {/* ── 4. SUB-NAVIGATION TABS (ROW 3 MATCHING REFERENCE DESIGN) ── */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">

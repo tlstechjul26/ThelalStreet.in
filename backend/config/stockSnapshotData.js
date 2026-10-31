@@ -36,7 +36,7 @@ export const STOCK_SNAPSHOTS = {
       "1Y": 18.2,
       "3Y": 22.4,
       "5Y": 48,
-      "ALL": null
+      "ALL": 6291.14
     },
     "sector": "Banking",
     "industry": "Commercial Banks",
@@ -74,7 +74,7 @@ export const STOCK_SNAPSHOTS = {
       "1Y": 28.5,
       "3Y": 68,
       "5Y": 165,
-      "ALL": null
+      "ALL": 5368.71
     },
     "sector": "Banking",
     "industry": "Commercial Banks",
@@ -112,7 +112,7 @@ export const STOCK_SNAPSHOTS = {
       "1Y": 4.2,
       "3Y": -2.1,
       "5Y": 14.8,
-      "ALL": null
+      "ALL": 109804.77
     },
     "sector": "Banking",
     "industry": "Commercial Banks",
@@ -150,7 +150,7 @@ export const STOCK_SNAPSHOTS = {
       "1Y": 38.5,
       "3Y": 72,
       "5Y": 240,
-      "ALL": null
+      "ALL": 4356.51
     },
     "sector": "Banking",
     "industry": "Commercial Banks",
@@ -188,7 +188,7 @@ export const STOCK_SNAPSHOTS = {
       "1Y": 14.6,
       "3Y": 48.9,
       "5Y": 78.4,
-      "ALL": null
+      "ALL": 2730.0
     },
     "sector": "Banking",
     "industry": "Commercial Banks",
@@ -536,7 +536,7 @@ export const STOCK_SNAPSHOTS = {
       "1Y": -0.8,
       "3Y": 8.5,
       "5Y": 118,
-      "ALL": null
+      "ALL": 222920.16
     },
     "sector": "Financial Services",
     "industry": "NBFC",
@@ -760,7 +760,7 @@ export const STOCK_SNAPSHOTS = {
       "1Y": 14.5,
       "3Y": 42,
       "5Y": 88,
-      "ALL": null
+      "ALL": 5148.11
     },
     "sector": "Energy",
     "industry": "Oil, Gas & Consumables",
@@ -836,7 +836,7 @@ export const STOCK_SNAPSHOTS = {
       "1Y": 26,
       "3Y": 22,
       "5Y": 115,
-      "ALL": null
+      "ALL": 763.84
     },
     "sector": "IT",
     "industry": "IT Services",
@@ -1274,7 +1274,7 @@ export const STOCK_SNAPSHOTS = {
       "1Y": 85,
       "3Y": 240,
       "5Y": 460,
-      "ALL": null
+      "ALL": 4612.72
     },
     "sector": "Auto",
     "industry": "Automotive",
@@ -1866,7 +1866,7 @@ export const STOCK_SNAPSHOTS = {
       "1Y": 12,
       "3Y": 85,
       "5Y": 140,
-      "ALL": null
+      "ALL": 1561.95
     },
     "source": "SNAPSHOT",
     "sourceType": "VERIFIED_SNAPSHOT",
@@ -1904,7 +1904,7 @@ export const STOCK_SNAPSHOTS = {
       "1Y": -2,
       "3Y": 8,
       "5Y": 22,
-      "ALL": null
+      "ALL": 551.0
     },
     "source": "SNAPSHOT",
     "sourceType": "VERIFIED_SNAPSHOT",
@@ -3200,7 +3200,7 @@ export const STOCK_SNAPSHOTS = {
       "1Y": 24,
       "3Y": 95,
       "5Y": 280,
-      "ALL": null
+      "ALL": 10874.21
     },
     "source": "SNAPSHOT",
     "sourceType": "VERIFIED_SNAPSHOT",
@@ -10127,6 +10127,166 @@ export const STOCK_SNAPSHOTS = {
       "5Y": 38,
       "ALL": null
     },
+    "source": "SNAPSHOT",
+    "sourceType": "VERIFIED_SNAPSHOT",
+    "dataStatus": "SNAPSHOT",
+    "isLive": false,
+    "priceAsOf": "2026-03-27T10:00:00.000Z",
+    "lastUpdatedAt": "2026-08-27T10:05:58.047Z"
+  },
+  "BEL.NS": {
+    "ltp": 369.9,
+    "open": 368.5,
+    "previousClose": 365.2,
+    "change": 4.7,
+    "changePercent": 1.29,
+    "high52": 435.0,
+    "low52": 268.0,
+    "volume": 8500000,
+    "marketCap": 270000,
+    "pe": 54.2,
+    "eps": 6.82,
+    "returns": {
+      "1W": 2.18,
+      "1M": -4.74,
+      "6M": -14.24,
+      "1Y": -9.76,
+      "3Y": 180.33,
+      "5Y": 436.48,
+      "ALL": 19108.03
+    },
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense",
+    "name": "Bharat Electronics",
+    "symbol": "BEL.NS",
+    "source": "SNAPSHOT",
+    "sourceType": "VERIFIED_SNAPSHOT",
+    "dataStatus": "SNAPSHOT",
+    "isLive": false,
+    "priceAsOf": "2026-03-27T10:00:00.000Z",
+    "lastUpdatedAt": "2026-08-27T10:05:58.047Z"
+  },
+  "DMART.NS": {
+    "ltp": 3199.0,
+    "open": 3190.0,
+    "previousClose": 3180.0,
+    "change": 19.0,
+    "changePercent": 0.60,
+    "high52": 5484.85,
+    "low52": 3100.0,
+    "volume": 650000,
+    "marketCap": 208000,
+    "pe": 82.5,
+    "eps": 38.77,
+    "returns": {
+      "1W": 1.31,
+      "1M": -15.85,
+      "6M": -30.24,
+      "1Y": -23.12,
+      "3Y": -12.28,
+      "5Y": -30.99,
+      "ALL": 401.53
+    },
+    "sector": "Consumer Staples",
+    "industry": "Food & Staples Retailing",
+    "name": "Avenue Supermarts",
+    "symbol": "DMART.NS",
+    "source": "SNAPSHOT",
+    "sourceType": "VERIFIED_SNAPSHOT",
+    "dataStatus": "SNAPSHOT",
+    "isLive": false,
+    "priceAsOf": "2026-03-27T10:00:00.000Z",
+    "lastUpdatedAt": "2026-08-27T10:05:58.047Z"
+  },
+  "TRENT.NS": {
+    "ltp": 3017.3,
+    "open": 3000.0,
+    "previousClose": 2985.0,
+    "change": 32.3,
+    "changePercent": 1.08,
+    "high52": 3450.0,
+    "low52": 1920.0,
+    "volume": 1200000,
+    "marketCap": 107000,
+    "pe": 78.4,
+    "eps": 38.48,
+    "returns": {
+      "1W": 10.63,
+      "1M": 15.09,
+      "6M": 9.2,
+      "1Y": -36.4,
+      "3Y": 42.34,
+      "5Y": 200.78,
+      "ALL": 28981.75
+    },
+    "sector": "Consumer Discretionary",
+    "industry": "Specialty Retail",
+    "name": "Trent Ltd",
+    "symbol": "TRENT.NS",
+    "source": "SNAPSHOT",
+    "sourceType": "VERIFIED_SNAPSHOT",
+    "dataStatus": "SNAPSHOT",
+    "isLive": false,
+    "priceAsOf": "2026-03-27T10:00:00.000Z",
+    "lastUpdatedAt": "2026-08-27T10:05:58.047Z"
+  },
+  "BSE.NS": {
+    "ltp": 3510.4,
+    "open": 3495.0,
+    "previousClose": 3470.0,
+    "change": 40.4,
+    "changePercent": 1.16,
+    "high52": 3950.0,
+    "low52": 1850.0,
+    "volume": 950000,
+    "marketCap": 95000,
+    "pe": 48.2,
+    "eps": 72.82,
+    "returns": {
+      "1W": 8.65,
+      "1M": 13.53,
+      "6M": -3.57,
+      "1Y": 43.7,
+      "3Y": 454.95,
+      "5Y": 2285.95,
+      "ALL": 3236.35
+    },
+    "sector": "Financials",
+    "industry": "Financial Exchanges & Data",
+    "name": "BSE Ltd",
+    "symbol": "BSE.NS",
+    "source": "SNAPSHOT",
+    "sourceType": "VERIFIED_SNAPSHOT",
+    "dataStatus": "SNAPSHOT",
+    "isLive": false,
+    "priceAsOf": "2026-03-27T10:00:00.000Z",
+    "lastUpdatedAt": "2026-08-27T10:05:58.047Z"
+  },
+  "IDEA.NS": {
+    "ltp": 11.83,
+    "open": 11.80,
+    "previousClose": 11.75,
+    "change": 0.08,
+    "changePercent": 0.68,
+    "high52": 19.18,
+    "low52": 6.80,
+    "volume": 85000000,
+    "marketCap": 82000,
+    "pe": null,
+    "eps": -4.2,
+    "returns": {
+      "1W": 4.14,
+      "1M": -8.65,
+      "6M": 15.75,
+      "1Y": 35.51,
+      "3Y": 1.55,
+      "5Y": 23.87,
+      "ALL": -79.26
+    },
+    "sector": "Telecommunications",
+    "industry": "Wireless Telecommunication",
+    "name": "Vodafone Idea",
+    "symbol": "IDEA.NS",
     "source": "SNAPSHOT",
     "sourceType": "VERIFIED_SNAPSHOT",
     "dataStatus": "SNAPSHOT",
